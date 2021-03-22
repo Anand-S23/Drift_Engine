@@ -56,7 +56,7 @@ typedef struct drift_application
 
 enum {
 #define Key(name, str) KEY_##name,
-#include "platform_key_list.h"
+#include "drift_key_list.h"
     KEY_MAX
 };
 

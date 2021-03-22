@@ -100,4 +100,9 @@ static v4 V4Init(float x, float y, float z, float w)
 }
 #define v4(x, y, z, w) V4Init(x, y, z, w)
 
+typedef struct matrix4f
+{
+    float elements[4][4];
+} matrix4f;
+
 #endif
