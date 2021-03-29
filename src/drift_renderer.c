@@ -54,15 +54,13 @@ internal shader CreateShader(const char *vertex_shader_source,
 
 internal void UseShader(shader shader)
 {
-    glUseProgram(shader.shader_program);
+    glUseProgram(shader.program_id);
 }
 
 internal void DetachShader()
 {
     glUseProgram(0);
 }
-    
-// TODO: DeleteShader
 
 internal void ClearScreen(v4 color)
 {
@@ -72,25 +70,32 @@ internal void ClearScreen(v4 color)
 
 internal void InitRenderer(renderer *renderer)
 {
-    LoadAllOpenGLProcedures(platform);
+    renderer->shader = CreateShader(default_vertex_shader,
+                                    default_fragment_shader);
 
-    f32 vertices[18] = {0};
+    float vertices[] = {
+        -0.5f, -0.5f,
+         0.5f, -0.5f,
+         0.5f,  0.5f,
+        -0.5f, -0.5f,
+         0.5f,  0.5f,
+        -0.5f,  0.5f
+
+    };
 
     glGenVertexArrays(1, &renderer->vao);
     glBindVertexArray(renderer->vao);
 
     glGenBuffers(1, &renderer->vbo);
     glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices),
+                 vertices, GL_DYNAMIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0); 
     glBindVertexArray(0); 
-
-    renderer->shader = CreateShader(&defualt_vertex_shader,
-                                    &default_fragment_shader);
 }
 
 internal void BeginRenderer(renderer *renderer,
@@ -99,31 +104,75 @@ internal void BeginRenderer(renderer *renderer,
     renderer->window_width = window_width;
     renderer->window_height = window_height;
 
-    // TODO: gl projection matrix (making opengl use screen coordinates)
     glViewport(0, 0, window_width, window_height);
+
+    renderer->projection_matrix = OrthographicMatrix(0, window_width,
+                                                     window_height, 0,
+                                                     0.f, 100.f);
+    renderer->render_list_count = 0;
 }
 
+internal void UploadMatrix4f(shader shader, matrix4f matrix, char *name)
+{
+    int location = glGetUniformLocation(shader.program_id, name); 
+    glUniformMatrix4fv(location, 1, GL_FALSE, &matrix.elements[0][0]);
+}
+    
 internal void SubmitRenderer(renderer *renderer)
 {
     for (int i = 0; i < renderer->render_list_count; ++i)
     {
-        switch(renderer->render_list[i].type)
+        render_object obj = renderer->render_list[i];
+        switch(obj.type)
         {
             case RENDER_TYPE_rect:
             {
-                glUseProgram(renderer->shader.program_id);
+                UploadMatrix4f(renderer->shader,
+                               renderer->projection_matrix,
+                               "projection");
 
-                // TODO: Update default
+                glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
+                glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(obj.vertices), obj.vertices);
 
+                UseShader(renderer->shader);
                 glBindVertexArray(renderer->vao);
                 glDrawArrays(GL_TRIANGLES, 0, 6);
             } break;
 
             default:
-            {
-            } break;
+                break;
         }
     }
-            
+}
+
+internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
+{
+    render_object obj = {0};
+    {
+        obj.type = RENDER_TYPE_rect;
+        obj.position = position;
+        obj.size = size;
+        obj.color = color;
+
+        v2 tl = position;
+        v2 br = v2(position.x + size.x, position.y + size.y);
+
+        obj.vertices[0] = tl.x;
+        obj.vertices[1] = br.y;
+        obj.vertices[2] = br.x;
+        obj.vertices[3] = br.y;
+        obj.vertices[4] = br.x;
+        obj.vertices[5] = tl.y;
+
+        obj.vertices[6] = tl.x;
+        obj.vertices[7] = br.y;
+        obj.vertices[8] = br.x;
+        obj.vertices[9] = tl.y;
+        obj.vertices[10] = tl.x;
+        obj.vertices[11] = tl.y;
+    }
+
+    renderer->render_list[renderer->render_list_count] = obj;
+    renderer->render_list_count++;
 }
     

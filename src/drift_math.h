@@ -105,4 +105,49 @@ typedef struct matrix4f
     float elements[4][4];
 } matrix4f;
 
+static matrix4f IdentityMatrix()
+{
+    matrix4f m = {0};
+    {
+        m.elements[0][0] = 1.f;
+        m.elements[1][1] = 1.f;
+        m.elements[2][2] = 1.f;
+        m.elements[3][3] = 1.f;
+    }
+
+    return m;
+}
+
+static matrix4f OrthographicMatrix(f32 left, f32 right,
+                                   f32 bottom, f32 top,
+                                   f32 near_plane, f32 far_plane)
+{
+    matrix4f m = {0};
+    {
+        m.elements[0][0] = 2.f / (right - left);
+        m.elements[1][1] = 2.f / (top - bottom);
+        m.elements[2][2] = -2.f / (far_plane - near_plane);
+        m.elements[3][3] = 1.f;
+        m.elements[3][0] = (left + right) / (left - right);
+        m.elements[3][1] = (bottom + top) / (bottom - top);
+        m.elements[3][2] = (far_plane + near_plane) / (near_plane - far_plane);
+    }
+
+    return m;
+}
+
+static void TranslateMatrix(matrix4f *m, v3 translation)
+{
+    m->elements[0][3] = translation.x;
+    m->elements[1][3] = translation.y;
+    m->elements[2][3] = translation.z;
+}
+
+static void ScaleMatrix(matrix4f *m, v3 scale)
+{
+    m->elements[0][0] = scale.x;
+    m->elements[1][1] = scale.y;
+    m->elements[2][2] = scale.z;
+}
+
 #endif

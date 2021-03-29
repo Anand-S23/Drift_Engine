@@ -92,7 +92,7 @@ internal b32 Win32InitOpenGL(HDC *device_context, HINSTANCE instance)
                 wglMakeCurrent(*device_context, 0);
                 wglDeleteContext(gl_rc);
                 wglMakeCurrent(*device_context, Render_Context);
-                wglSwapIntervalEXT(0); // vsync off by default
+                wglSwapIntervalEXT(1); // vsync off by default
                 result = 1;
             }
         }
