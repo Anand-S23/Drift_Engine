@@ -44,6 +44,12 @@ inline u32 SafeTruncateUInt64(u64 value)
     Assert(value <= 0xFFFFFFFF);
     return (u32)value;
 }
+
+typedef struct read_file_result
+{
+    u32 size;
+    void *memory;
+} read_file_result;
     
 typedef struct drift_application
 {
@@ -111,6 +117,9 @@ typedef struct platform
     // Functions
     void (*SwapBuffers)(void); 
     void *(*LoadOpenGLProcedure)(char *name);
+    read_file_result (*ReadFile)(char *filename);
+    void (*FreeFileMemory)(void *memory);
+    void (*WriteFile)(char *filename, u32 memory_size, void *memory);
 } platform;
 
 #endif
