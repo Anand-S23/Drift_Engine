@@ -25,6 +25,7 @@ internal void Update(platform *platform)
     local_persist renderer renderer = {0};
     if (!platform->initialized)
     {
+        // LoadAllOpenGLProcedures(platform);
         InitRenderer(&renderer);
         platform->initialized = 1;
     }

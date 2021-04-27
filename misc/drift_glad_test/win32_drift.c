@@ -2,7 +2,9 @@
 #include <xinput.h>
 #include <stdio.h>
 
+// #include <gl/gl.h>
 #include <glad/glad.h>
+// #include <glext.h>
 #include <wglext.h>
 
 #include "drift_platform.h"
@@ -15,6 +17,21 @@ global HDC Device_Context;
 global HGLRC Render_Context;
 
 // OpenGL
+/*
+internal void *Win32LoadOpenGLProcedure(const char *name)
+{
+    void *proc = (void *)wglGetProcAddress(name);
+
+    if (!proc || proc == (void *)0x1 || proc == (void *)0x2 ||
+        proc == (void *)0x3 || proc == (void *)-1)
+    {
+        proc = 0;
+    }
+
+    return proc;
+}
+*/
+
 internal b32 Win32InitOpenGL(HDC *device_context, HINSTANCE instance)
 {
     b32 result = 0;
@@ -39,50 +56,13 @@ internal b32 Win32InitOpenGL(HDC *device_context, HINSTANCE instance)
     SetPixelFormat(*device_context, format_index, &pixel_format);
 
     HGLRC gl_rc = wglCreateContext(*device_context);
-    if (wglMakeCurrent(*device_context, gl_rc))
-    {
-        /*
-        int attribs[] = {
-            WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-            WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-            WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
-            WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
-            WGL_COLOR_BITS_ARB, 32,
-            WGL_DEPTH_BITS_ARB, 24,
-            WGL_STENCIL_BITS_ARB, 8,
-            0
-        };
-
-        UINT num_formats = 0;
-        glChoosePixelFormatARB(*device_context, attribs, 0, 1,
-                                &format_index, &num_formats);
-        
-        if (format_index)
-        {
-            const int context_attribs[] = {
-                WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
-                WGL_CONTEXT_MINOR_VERSION_ARB, 3,
-                0
-            };
-            
-            Render_Context = wglCreateContextAttribsARB(*device_context, gl_rc, context_attribs);
-            if (Render_Context)
-            {
-                wglMakeCurrent(*device_context, 0);
-                wglDeleteContext(gl_rc);
-                wglMakeCurrent(*device_context, Render_Context);
-                wglSwapIntervalEXT(1); // vsync off by default
-                result = 1;
-            }
-        }
-        */
-    }
+    wglMakeCurrent(*device_context, gl_rc);
 
     if (!gladLoadGL()) 
     {
-        // TODO: Logging
+        printf("Something went wrong!\n");
     }
-
+    
     return result;
 }
 
@@ -438,6 +418,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                                  MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
                 Global_Platform.SwapBuffers = Win32SwapBuffers;
+                // Global_Platform.LoadOpenGLProcedure = Win32LoadOpenGLProcedure;
                 Global_Platform.ReadFile = Win32ReadFile;
                 Global_Platform.FreeFileMemory = Win32FreeFileMemory;
                 Global_Platform.WriteFile = Win32WriteFile;
