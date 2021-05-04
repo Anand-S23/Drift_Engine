@@ -83,6 +83,10 @@ typedef struct platform
 
     b32 initialized;
 
+    // Time
+    f32 current_time;
+    f32 last_time;
+
     // Input
     b32 key_down[KEY_MAX];
 

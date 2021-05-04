@@ -22,24 +22,28 @@ internal drift_application DriftInit()
 
 internal void Update(platform *platform)
 {
-    local_persist renderer renderer = {0};
+    Assert(sizeof(app_state) <= platform->storage_size);
+    app_state *state = (app_state *)platform->storage;
+    state->delta_t = platform->current_time - platform->last_time;
+
     if (!platform->initialized)
     {
-        InitRenderer(&renderer);
+        InitRenderer(&state->renderer);
         platform->initialized = 1;
 
         platform->LogWarning("Initialized platfrom");
     }
 
+
     ClearScreen(v4(0.2f, 0.3f, 0.3f, 1.0f));
 
-    BeginRenderer(&renderer, platform->window_width, platform->window_height);
-    RenderRect(&renderer, v2(0, 0), v2(100.f, 100.f), v4(1, 1, 1, 1));
-    RenderRect(&renderer, v2(500, 100), v2(100.f, 200.f), v4(1, 1, 1, 1));
-    RenderRect(&renderer, v2(100, 300), v2(100.f, 200.f), v4(1, 1, 1, 1));
-    RenderRect(&renderer, v2(300, 300), v2(100.f, 200.f), v4(1, 1, 1, 1));
-    RenderRect(&renderer, v2(1000, 1000), v2(100.f, 200.f), v4(1, 1, 1, 1));
-    SubmitRenderer(&renderer);
+    BeginRenderer(&state->renderer, platform->window_width, platform->window_height);
+    RenderRect(&state->renderer, v2(0, 0), v2(100.f, 100.f), v4(1, 1, 1, 1));
+    RenderRect(&state->renderer, v2(500, 100), v2(100.f, 200.f), v4(1, 1, 1, 1));
+    RenderRect(&state->renderer, v2(100, 300), v2(100.f, 200.f), v4(1, 1, 1, 1));
+    RenderRect(&state->renderer, v2(300, 300), v2(100.f, 200.f), v4(1, 1, 1, 1));
+    RenderRect(&state->renderer, v2(1000, 1000), v2(100.f, 200.f), v4(1, 1, 1, 1));
+    SubmitRenderer(&state->renderer);
 
     platform->SwapBuffers();
 }

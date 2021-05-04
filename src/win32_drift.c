@@ -16,6 +16,32 @@ global i64 Global_Perf_Count_Frequency;
 global WINDOWPLACEMENT Global_WindowPosition = { sizeof(Global_WindowPosition) };
 
 // OpenGL
+internal void *Win32LoadOpenGLProcedure(char *name)
+{
+    void *p = (void *)wglGetProcAddress(name);
+
+    if(!p || p == (void *)0x1 || p == (void *)0x2 ||
+       p == (void *)0x3 || p == (void *) - 1)
+    {
+        return 0;
+    }
+
+    return p;
+}
+
+PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB;
+PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
+PFNWGLMAKECONTEXTCURRENTARBPROC wglMakeContextCurrentARB;
+PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
+
+internal void Win32LoadWGLFunctions(HINSTANCE instance)
+{
+    wglChoosePixelFormatARB    = (PFNWGLCHOOSEPIXELFORMATARBPROC)    Win32LoadOpenGLProcedure("wglChoosePixelFormatARB");
+    wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC) Win32LoadOpenGLProcedure("wglCreateContextAttribsARB");
+    wglMakeContextCurrentARB   = (PFNWGLMAKECONTEXTCURRENTARBPROC)   Win32LoadOpenGLProcedure("wglMakeContextCurrentARB");
+    wglSwapIntervalEXT         = (PFNWGLSWAPINTERVALEXTPROC)         Win32LoadOpenGLProcedure("wglSwapIntervalEXT");
+}
+
 internal b32 Win32InitOpenGL(HDC *device_context, HINSTANCE instance)
 {
     b32 result = 0;
@@ -42,6 +68,8 @@ internal b32 Win32InitOpenGL(HDC *device_context, HINSTANCE instance)
     HGLRC gl_rc = wglCreateContext(*device_context);
     wglMakeCurrent(*device_context, gl_rc);
 
+    Win32LoadWGLFunctions(instance);
+    
     if (!gladLoadGL()) 
     {
         // TODO: Logging
@@ -63,7 +91,7 @@ internal void Win32SwapBuffers(void)
 
 internal void ToggleVSync()
 {
-    wglSwapIntervalExt(Global_Platform.v_sync);
+    wglSwapIntervalEXT(Global_Platform.v_sync);
 }
         
 // Files
@@ -491,11 +519,13 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
 
             if (Global_Platform.v_sync)
             {
-            // ToggleVSync();
+                ToggleVSync();
             }
 
             while (Global_Platform.running)
             {
+                Global_Platform.last_time = Global_Platform.current_time;
+                Global_Platform.current_time += 1.f / target_fps;
                 MSG message;
                 while(PeekMessage(&message, 0, 0, 0, PM_REMOVE))
                 {
