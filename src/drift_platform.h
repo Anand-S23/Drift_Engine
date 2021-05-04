@@ -50,7 +50,7 @@ typedef struct read_file_result
     u32 size;
     void *memory;
 } read_file_result;
-    
+
 typedef struct drift_application
 {
     char name[256];
@@ -120,6 +120,8 @@ typedef struct platform
     read_file_result (*ReadFile)(char *filename);
     void (*FreeFileMemory)(void *memory);
     void (*WriteFile)(char *filename, u32 memory_size, void *memory);
+    void (*LogWarning)(char *format);
+    void (*LogError)(char *message_format, ...);
 } platform;
 
 #endif

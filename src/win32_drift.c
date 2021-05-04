@@ -10,9 +10,10 @@
 #include "app.c"
 
 global platform Global_Platform = {0};
+global HDC Global_Device_Context;
+global HGLRC Global_Render_Context;
+global i64 Global_Perf_Count_Frequency;
 global WINDOWPLACEMENT Global_WindowPosition = { sizeof(Global_WindowPosition) };
-global HDC Device_Context;
-global HGLRC Render_Context;
 
 // OpenGL
 internal b32 Win32InitOpenGL(HDC *device_context, HINSTANCE instance)
@@ -39,44 +40,7 @@ internal b32 Win32InitOpenGL(HDC *device_context, HINSTANCE instance)
     SetPixelFormat(*device_context, format_index, &pixel_format);
 
     HGLRC gl_rc = wglCreateContext(*device_context);
-    if (wglMakeCurrent(*device_context, gl_rc))
-    {
-        /*
-        int attribs[] = {
-            WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
-            WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
-            WGL_DOUBLE_BUFFER_ARB, GL_TRUE,
-            WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
-            WGL_COLOR_BITS_ARB, 32,
-            WGL_DEPTH_BITS_ARB, 24,
-            WGL_STENCIL_BITS_ARB, 8,
-            0
-        };
-
-        UINT num_formats = 0;
-        glChoosePixelFormatARB(*device_context, attribs, 0, 1,
-                                &format_index, &num_formats);
-        
-        if (format_index)
-        {
-            const int context_attribs[] = {
-                WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
-                WGL_CONTEXT_MINOR_VERSION_ARB, 3,
-                0
-            };
-            
-            Render_Context = wglCreateContextAttribsARB(*device_context, gl_rc, context_attribs);
-            if (Render_Context)
-            {
-                wglMakeCurrent(*device_context, 0);
-                wglDeleteContext(gl_rc);
-                wglMakeCurrent(*device_context, Render_Context);
-                wglSwapIntervalEXT(1); // vsync off by default
-                result = 1;
-            }
-        }
-        */
-    }
+    wglMakeCurrent(*device_context, gl_rc);
 
     if (!gladLoadGL()) 
     {
@@ -89,12 +53,12 @@ internal b32 Win32InitOpenGL(HDC *device_context, HINSTANCE instance)
 internal void Win32CleanUpOpenGL(HDC *device_context)
 {
     wglMakeCurrent(*device_context, 0);
-    wglDeleteContext(Render_Context);
+    wglDeleteContext(Global_Render_Context);
 }
 
 internal void Win32SwapBuffers(void)
 {
-    wglSwapLayerBuffers(Device_Context, WGL_SWAP_MAIN_PLANE);
+    wglSwapLayerBuffers(Global_Device_Context, WGL_SWAP_MAIN_PLANE);
 }
 
 internal void ToggleVSync()
@@ -184,6 +148,68 @@ internal b32 Win32WriteFile(char *filename, u32 memory_size, void *memory)
         // TODO: logging
     }
 
+    return result;
+}
+
+// Logging
+internal void Win32LogWarning(char *format, ...)
+{
+    char str_buffer[4096];
+    wsprintf(str_buffer, "[WARNING] - ");
+
+    va_list args;
+    va_start(args, format);
+    u32 required_characters = vsnprintf(0, 0, format, args)+1;
+    va_end(args);
+    
+    wsprintf(str_buffer, format, args);
+    char text[4096] = {0};
+    if(required_characters > 4096)
+    {
+        required_characters = 4096;
+    }
+    
+    va_start(args, format);
+    vsnprintf(text, required_characters, str_buffer, args);
+    va_end(args);
+    
+    text[required_characters-1] = 0;
+    OutputDebugStringA(str_buffer);
+}
+
+internal void Win32LogError(char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    u32 required_characters = vsnprintf(0, 0, format, args)+1;
+    va_end(args);
+    
+    char text[4096] = {0};
+    if(required_characters > 4096)
+    {
+        required_characters = 4096;
+    }
+    
+    va_start(args, format);
+    vsnprintf(text, required_characters, format, args);
+    va_end(args);
+    
+    text[required_characters-1] = 0;
+    MessageBoxA(0, text, "Error", MB_OK);
+    OutputDebugStringA(text);
+}
+
+// Time
+inline LARGE_INTEGER Win32GetWallClock()
+{
+    LARGE_INTEGER result; 
+    QueryPerformanceCounter(&result);
+    return result;
+}
+
+inline f32 Win32GetSecondsElapsed(LARGE_INTEGER start, LARGE_INTEGER end)
+{
+    f32 result = (f32)(end.QuadPart - start.QuadPart) / (f32)Global_Perf_Count_Frequency;
     return result;
 }
 
@@ -400,6 +426,12 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
         window_class.hCursor = LoadCursor(NULL, IDC_ARROW);
     }
 
+    b32 sleep_is_granular = (timeBeginPeriod(1) == TIMERR_NOERROR);
+
+    LARGE_INTEGER counter_per_second;
+    QueryPerformanceFrequency(&counter_per_second);
+    Global_Perf_Count_Frequency = counter_per_second.QuadPart;
+
     if (RegisterClassA(&window_class))
     {
         drift_application app = DriftInit();
@@ -412,8 +444,15 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
 
         if (window)
         {
-            Device_Context = GetDC(window);
-            Win32InitOpenGL(&Device_Context, instance);
+            Global_Device_Context = GetDC(window);
+            Win32InitOpenGL(&Global_Device_Context, instance);
+
+            int moniter_refresh_hz = GetDeviceCaps(Global_Device_Context, VREFRESH);
+            int game_update_hz = moniter_refresh_hz / 2;
+            f32 target_fps = 1.0f / (f32)game_update_hz;
+
+            LARGE_INTEGER last_counter = Win32GetWallClock(); 
+            u64 last_cycle_count = __rdtsc();
 
             ShowWindow(window, cmd_show);
             UpdateWindow(window);
@@ -441,6 +480,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                 Global_Platform.ReadFile = Win32ReadFile;
                 Global_Platform.FreeFileMemory = Win32FreeFileMemory;
                 Global_Platform.WriteFile = Win32WriteFile;
+                Global_Platform.LogWarning = Win32LogWarning;
+                Global_Platform.LogError = Win32LogError;
             }
 
             if (Global_Platform.fullscreen)
@@ -463,11 +504,48 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                 }
 
                 Update(&Global_Platform);
+
+                LARGE_INTEGER work_counter = Win32GetWallClock();
+                f32 work_seconds_elapsed = Win32GetSecondsElapsed(work_counter, last_counter);
+
+                f32 seconds_elapsed_for_frame = work_seconds_elapsed; 
+                if (seconds_elapsed_for_frame < target_fps)
+                {
+                    while (seconds_elapsed_for_frame < target_fps)
+                    {
+                        if (sleep_is_granular)
+                        {
+                            DWORD sleep_ms = (DWORD)(1000.0f * (target_fps - seconds_elapsed_for_frame));
+                            Sleep(sleep_ms);
+                        }
+                        seconds_elapsed_for_frame = Win32GetSecondsElapsed(last_counter, 
+                                                                        Win32GetWallClock());
+                    }
+                }
+                else
+                {
+                    // NOTE: Miss frame
+                    // TODO: Logging
+                }
+
+                LARGE_INTEGER end_counter = Win32GetWallClock();
+                u64 end_cycle_count = __rdtsc();
+
+                i64 counter_elapsed = end_counter.QuadPart - last_counter.QuadPart;
+                u64 cycle_elpased = end_cycle_count - last_cycle_count;
+
+                i32 ms_per_frame = (i32)((1000 * counter_elapsed) / Global_Perf_Count_Frequency);
+                i32 fps = (i32)(Global_Perf_Count_Frequency / counter_elapsed);
+                i32 mcpf = (i32)(cycle_elpased / (1000 * 1000));
+                f32 seconds_elapsed_for_work = (f32)counter_elapsed / (f32)Global_Perf_Count_Frequency;
+
+                last_counter = end_counter;
+                last_cycle_count = end_cycle_count;
             }
 
             ShowWindow(window, SW_HIDE);
-            ReleaseDC(window, Device_Context);
-            Win32CleanUpOpenGL(&Device_Context);
+            ReleaseDC(window, Global_Device_Context);
+            Win32CleanUpOpenGL(&Global_Device_Context);
         }
         else
         {

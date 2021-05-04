@@ -27,6 +27,8 @@ internal void Update(platform *platform)
     {
         InitRenderer(&renderer);
         platform->initialized = 1;
+
+        platform->LogWarning("Initialized platfrom");
     }
 
     ClearScreen(v4(0.2f, 0.3f, 0.3f, 1.0f));
@@ -34,6 +36,9 @@ internal void Update(platform *platform)
     BeginRenderer(&renderer, platform->window_width, platform->window_height);
     RenderRect(&renderer, v2(0, 0), v2(100.f, 100.f), v4(1, 1, 1, 1));
     RenderRect(&renderer, v2(500, 100), v2(100.f, 200.f), v4(1, 1, 1, 1));
+    RenderRect(&renderer, v2(100, 300), v2(100.f, 200.f), v4(1, 1, 1, 1));
+    RenderRect(&renderer, v2(300, 300), v2(100.f, 200.f), v4(1, 1, 1, 1));
+    RenderRect(&renderer, v2(1000, 1000), v2(100.f, 200.f), v4(1, 1, 1, 1));
     SubmitRenderer(&renderer);
 
     platform->SwapBuffers();
