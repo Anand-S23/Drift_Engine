@@ -475,7 +475,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
             Global_Device_Context = GetDC(window);
             Win32InitOpenGL(&Global_Device_Context, instance);
 
-            int moniter_refresh_hz = GetDeviceCaps(Global_Device_Context, VREFRESH);
+            // int moniter_refresh_hz = GetDeviceCaps(Global_Device_Context, VREFRESH);
+            int moniter_refresh_hz = 60;
             int game_update_hz = moniter_refresh_hz / 2;
             f32 target_fps = 1.0f / (f32)game_update_hz;
 

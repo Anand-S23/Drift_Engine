@@ -34,15 +34,72 @@ internal void Update(platform *platform)
         platform->LogWarning("Initialized platfrom");
     }
 
+    local_persist v2 test_pos = {0};
+    local_persist v2 test_vel = {0};
+
+
+    // NOTE: For testing purposes only
+    {
+        f32 move_speed = 15.f;
+
+        // Movement
+        if (platform->key_down[KEY_w] || platform->key_down[KEY_up])
+        {
+            test_vel.y += (-move_speed - test_vel.y);
+        }
+        if (platform->key_down[KEY_a] || platform->key_down[KEY_left])
+        {
+            test_vel.x += (-move_speed - test_vel.x);
+        }
+        if (platform->key_down[KEY_s] || platform->key_down[KEY_down])
+        {
+            test_vel.y += (move_speed - test_vel.y);
+        }
+        if (platform->key_down[KEY_d] || platform->key_down[KEY_right])
+        {
+            test_vel.x += (move_speed - test_vel.x);
+        }
+
+        // Update position
+        if (test_vel.x != 0 && test_vel.y != 0)
+        {
+            test_vel = V2Normalize(test_vel);
+            test_vel = V2Scalar(test_vel, move_speed);
+        }
+
+        test_pos.x += test_vel.x;
+        test_pos.y += test_vel.y;
+
+        // World boundry collisions
+        // TODO: Can change this to clamp
+        if (test_pos.x <= 0)
+        {
+            test_pos.x = 0;
+        }
+        else if (test_pos.x >= platform->window_width - 32)
+        {
+            test_pos.x = platform->window_width - 32;
+        }
+            
+        if (test_pos.y <= 0)
+        {
+            test_pos.y = 0;
+        }
+        else if (test_pos.y >= platform->window_height - 32)
+        {
+            test_pos.y = platform->window_height - 32;
+        }
+
+        // Reset velocity
+        test_vel.x = 0;
+        test_vel.y = 0;
+    }
 
     ClearScreen(v4(0.2f, 0.3f, 0.3f, 1.0f));
 
     BeginRenderer(&state->renderer, platform->window_width, platform->window_height);
-    RenderRect(&state->renderer, v2(0, 0), v2(100.f, 100.f), v4(1, 1, 1, 1));
-    RenderRect(&state->renderer, v2(500, 100), v2(100.f, 200.f), v4(1, 1, 1, 1));
-    RenderRect(&state->renderer, v2(100, 300), v2(100.f, 200.f), v4(1, 1, 1, 1));
-    RenderRect(&state->renderer, v2(300, 300), v2(100.f, 200.f), v4(1, 1, 1, 1));
-    RenderRect(&state->renderer, v2(1000, 1000), v2(100.f, 200.f), v4(1, 1, 1, 1));
+
+    RenderRect(&state->renderer, test_pos, v2(32.f, 32.f), v4(1, 1, 1, 1));
     SubmitRenderer(&state->renderer);
 
     platform->SwapBuffers();
