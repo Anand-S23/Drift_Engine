@@ -1,5 +1,70 @@
 #include "drift_renderer.h"
 
+internal command_node *CreateCommandNode(command_data *data)
+{
+    command_node *node = (command_node *)malloc(sizeof(command_node));
+    {
+        node->data = data;
+        node->next = NULL;
+    }
+
+    return node;
+}
+
+internal command_buffer CreateCommandBuffer()
+{
+    command_buffer cb = {0};
+    {
+        cb.head = NULL;
+        cb.tail = NULL;
+        cb.command_count = 0;
+    }
+
+    return cb;
+}
+
+internal void PushCommand(command_buffer *cb, command_data *data)
+{
+    command_node *node = CreateCommandNode(data);
+
+    if (cb->head == NULL)
+    {
+        cb->head = node;
+    }
+    else if (cb->tail == NULL)
+    {
+        cb->tail = node;
+        cb->head->next = cb->tail;
+    }
+    else
+    {
+        cb->tail->next = node;
+        cb->tail = cb->tail->next;
+    }
+
+    cb->command_count++;
+}
+
+internal command_data *PopCommand(command_buffer *cb)
+{
+    command_data *data = cb->head->data;
+    command_node *temp = cb->head;
+    cb->head = cb->head->next;
+    free(temp);
+
+    if (cb->command_count == 2) 
+    {
+        cb->tail = NULL;
+    }
+
+    cb->command_count = Max(--cb->command_count, 0);
+}
+
+internal b32 CommandBufferIsEmpty(command_buffer *cb)
+{
+    return (cb->command_count == 0);
+}
+    
 internal shader CreateShader(const char *vertex_shader_source,
                              const char *fragment_shader_source)
 {
@@ -64,8 +129,17 @@ internal void DetachShader()
 
 internal void ClearScreen(v4 color)
 {
-    glClearColor(color.r, color.g, color.b, color.a); 
-    glClear(GL_COLOR_BUFFER_BIT);
+    command_data command = {0};
+    {
+        command.type = COMMAND_clear;
+        command.data_size = sizeof(float) * 4;
+        command.data = malloc(data_size);
+        memcpy(command.data, color, data_size); 
+    }
+
+    PushCommand(&command); 
+    // glClearColor(color.r, color.g, color.b, color.a); 
+    // glClear(GL_COLOR_BUFFER_BIT);
 }
 
 internal void InitRenderer(renderer *renderer)

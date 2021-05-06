@@ -51,22 +51,36 @@ typedef struct shader
     unsigned int program_id;
 } shader;
 
-typedef enum render_type
+typedef enum command_type
 {
-    RENDER_TYPE_triangle,
-    RENDER_TYPE_rect,
-    RENDER_TYPE_texture
-} render_type;
+    COMMAND_clear,
+    COMMAND_render_point,
+    COMMAND_render_line,
+    COMMAND_render_triangle,
+    COMMAND_render_rect,
+    COMMAND_render_texture
+} command_type;
 
-typedef struct render_object
+typedef struct command_data
 {
-    render_type type;
-    v2 position;
-    v2 size;
-    v4 color;
+    command_type type;
+    void *data;
+    u32 data_size;
+    u32 position;
+} command_data;
 
-    float vertices[12];
-} render_object;
+typedef struct command_node
+{
+    command_data *command;
+    struct comment_node *next;
+} command_node;
+
+typedef struct command_buffer
+{
+    command_node *head;
+    command_node *tail;
+    u32 command_count;
+} command_buffer;
 
 typedef struct renderer
 {
@@ -78,11 +92,8 @@ typedef struct renderer
     unsigned int vao;
     unsigned int vbo;
 
-    render_object render_list[MAX_RENDER_OBJECTS];
-    int render_list_count;
-
+    command_buffer cb;
     float vertices[6];
-
 } renderer;
 
 #endif
