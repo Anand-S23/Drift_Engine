@@ -99,7 +99,8 @@ internal void Update(platform *platform)
 
     BeginRenderer(&state->renderer, platform->window_width, platform->window_height);
 
-    RenderRect(&state->renderer, test_pos, v2(32.f, 32.f), v4(1, 1, 1, 1));
+    RenderRect(&state->renderer, test_pos, v2(32.f, 32.f), v4(1.0f, 0.5f, 0.2f, 1.0f));
+    RenderRect(&state->renderer, v2(100, 100), v2(100.f, 100.f), v4(0.5, 0, 0, 1));
     SubmitRenderer(&state->renderer);
 
     platform->SwapBuffers();

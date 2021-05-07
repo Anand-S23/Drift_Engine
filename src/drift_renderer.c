@@ -1,74 +1,9 @@
 #include "drift_renderer.h"
 
-internal command_node *CreateCommandNode(command_data *data)
-{
-    command_node *node = (command_node *)malloc(sizeof(command_node));
-    {
-        node->data = data;
-        node->next = NULL;
-    }
-
-    return node;
-}
-
-internal command_buffer CreateCommandBuffer()
-{
-    command_buffer cb = {0};
-    {
-        cb.head = NULL;
-        cb.tail = NULL;
-        cb.command_count = 0;
-    }
-
-    return cb;
-}
-
-internal void PushCommand(command_buffer *cb, command_data *data)
-{
-    command_node *node = CreateCommandNode(data);
-
-    if (cb->head == NULL)
-    {
-        cb->head = node;
-    }
-    else if (cb->tail == NULL)
-    {
-        cb->tail = node;
-        cb->head->next = cb->tail;
-    }
-    else
-    {
-        cb->tail->next = node;
-        cb->tail = cb->tail->next;
-    }
-
-    cb->command_count++;
-}
-
-internal command_data *PopCommand(command_buffer *cb)
-{
-    command_data *data = cb->head->data;
-    command_node *temp = cb->head;
-    cb->head = cb->head->next;
-    free(temp);
-
-    if (cb->command_count == 2) 
-    {
-        cb->tail = NULL;
-    }
-
-    cb->command_count = Max(--cb->command_count, 0);
-}
-
-internal b32 CommandBufferIsEmpty(command_buffer *cb)
-{
-    return (cb->command_count == 0);
-}
-    
+// TODO: Create shader from file
 internal shader CreateShader(const char *vertex_shader_source,
                              const char *fragment_shader_source)
 {
-    shader shader = {0};
     b32 success;
     char info_log[512];
 
@@ -113,13 +48,12 @@ internal shader CreateShader(const char *vertex_shader_source,
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
 
-    shader.program_id = shader_program;
-    return shader;
+    return (shader)shader_program;
 }
 
 internal void UseShader(shader shader)
 {
-    glUseProgram(shader.program_id);
+    glUseProgram(shader);
 }
 
 internal void DetachShader()
@@ -129,17 +63,8 @@ internal void DetachShader()
 
 internal void ClearScreen(v4 color)
 {
-    command_data command = {0};
-    {
-        command.type = COMMAND_clear;
-        command.data_size = sizeof(float) * 4;
-        command.data = malloc(data_size);
-        memcpy(command.data, color, data_size); 
-    }
-
-    PushCommand(&command); 
-    // glClearColor(color.r, color.g, color.b, color.a); 
-    // glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(color.r, color.g, color.b, color.a); 
+    glClear(GL_COLOR_BUFFER_BIT);
 }
 
 internal void InitRenderer(renderer *renderer)
@@ -148,13 +73,12 @@ internal void InitRenderer(renderer *renderer)
                                     default_fragment_shader);
 
     float vertices[] = {
-        -0.5f, -0.5f,
-         0.5f, -0.5f,
-         0.5f,  0.5f,
-        -0.5f, -0.5f,
-         0.5f,  0.5f,
-        -0.5f,  0.5f
-
+        -0.5f, -0.5f, 1.f, 1.f, 1.f, 1.f,
+         0.5f, -0.5f, 1.f, 1.f, 1.f, 1.f,
+         0.5f,  0.5f, 1.f, 1.f, 1.f, 1.f,
+        -0.5f, -0.5f, 1.f, 1.f, 1.f, 1.f,
+         0.5f,  0.5f, 1.f, 1.f, 1.f, 1.f,
+        -0.5f,  0.5f, 1.f, 1.f, 1.f, 1.f
     };
 
     glGenVertexArrays(1, &renderer->vao);
@@ -165,8 +89,11 @@ internal void InitRenderer(renderer *renderer)
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices),
                  vertices, GL_DYNAMIC_DRAW);
 
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0); 
     glBindVertexArray(0); 
@@ -188,8 +115,14 @@ internal void BeginRenderer(renderer *renderer,
 
 internal void UploadMatrix4f(shader shader, matrix4f matrix, char *name)
 {
-    int location = glGetUniformLocation(shader.program_id, name); 
+    int location = glGetUniformLocation(shader, name); 
     glUniformMatrix4fv(location, 1, GL_FALSE, &matrix.elements[0][0]);
+}
+
+internal void Upload4f(shader shader, v4 vec, char *name)
+{
+    int location = glGetUniformLocation(shader, name);
+    glUniform4f(location, vec.x, vec.y, vec.z, vec.w);
 }
     
 internal void SubmitRenderer(renderer *renderer)
@@ -204,6 +137,8 @@ internal void SubmitRenderer(renderer *renderer)
                 UploadMatrix4f(renderer->shader,
                                renderer->projection_matrix,
                                "projection");
+
+                // Upload4f(renderer->shader, obj.color, "color");
 
                 glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
                 glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(obj.vertices), obj.vertices);
@@ -231,6 +166,8 @@ internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
         v2 tl = position;
         v2 br = v2(position.x + size.x, position.y + size.y);
 
+        /* Just Position
+        // Bottom Triangle
         obj.vertices[0] = tl.x;
         obj.vertices[1] = br.y;
         obj.vertices[2] = br.x;
@@ -238,12 +175,62 @@ internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
         obj.vertices[4] = br.x;
         obj.vertices[5] = tl.y;
 
+        // Top Triangle
         obj.vertices[6] = tl.x;
         obj.vertices[7] = br.y;
         obj.vertices[8] = br.x;
         obj.vertices[9] = tl.y;
         obj.vertices[10] = tl.x;
         obj.vertices[11] = tl.y;
+        */
+
+        obj.vertices[0] = tl.x;
+        obj.vertices[1] = br.y;
+
+        obj.vertices[2] = color.r;
+        obj.vertices[3] = color.g;
+        obj.vertices[4] = color.b;
+        obj.vertices[5] = color.a;
+
+        obj.vertices[6] = br.x;
+        obj.vertices[7] = br.y;
+
+        obj.vertices[8] = color.r;
+        obj.vertices[9] = color.g;
+        obj.vertices[10] = color.b;
+        obj.vertices[11] = color.a;
+        
+        obj.vertices[12] = br.x;
+        obj.vertices[13] = tl.y;
+
+        obj.vertices[14] = color.r;
+        obj.vertices[15] = color.g;
+        obj.vertices[16] = color.b;
+        obj.vertices[17] = color.a;
+
+        obj.vertices[18] = tl.x;
+        obj.vertices[19] = br.y;
+
+        obj.vertices[20] = color.r;
+        obj.vertices[21] = color.g;
+        obj.vertices[22] = color.b;
+        obj.vertices[23] = color.a;
+
+        obj.vertices[24] = br.x;
+        obj.vertices[25] = tl.y;
+
+        obj.vertices[26] = color.r;
+        obj.vertices[27] = color.g;
+        obj.vertices[28] = color.b;
+        obj.vertices[29] = color.a;
+
+        obj.vertices[30] = tl.x;
+        obj.vertices[31] = tl.y;
+
+        obj.vertices[32] = color.r;
+        obj.vertices[33] = color.g;
+        obj.vertices[34] = color.b;
+        obj.vertices[35] = color.a;
     }
 
     renderer->render_list[renderer->render_list_count] = obj;

@@ -29,58 +29,47 @@ global const char *default_fragment_shader = "#version 330 core\n"
 
 global const char *default_vertex_shader = "#version 330 core\n"
     "layout (location = 0) in vec2 pos;\n"
+    "layout (location = 1) in vec4 color;\n"
 
     "uniform mat4 projection;\n"
+
+    "out vec4 f_color;\n"
 
     "void main()\n"
     "{\n"
         "gl_Position = projection * vec4(pos.x, pos.y, 0.f, 1.f);\n"
+        "f_color = color;\n"
    "}\0";
 
 global const char *default_fragment_shader = "#version 330 core\n"
+    "in vec4 f_color;\n"
     "out vec4 frag_color;\n"
 
     "void main() {\n"
-        "frag_color = vec4(1, 0, 0, 1);\n"
+        "frag_color = f_color;\n"
     "}\n\0";
+
+typedef unsigned int shader;
 
 #define MAX_RENDER_OBJECTS 1000
 
-typedef struct shader
+typedef enum render_type
 {
-    unsigned int program_id;
-} shader;
+    RENDER_TYPE_triangle,
+    RENDER_TYPE_rect,
+    RENDER_TYPE_texture
+} render_type;
 
-typedef enum command_type
+// TODO: More generic
+typedef struct render_object
 {
-    COMMAND_clear,
-    COMMAND_render_point,
-    COMMAND_render_line,
-    COMMAND_render_triangle,
-    COMMAND_render_rect,
-    COMMAND_render_texture
-} command_type;
+    render_type type;
+    v2 position;
+    v2 size;
+    v4 color;
 
-typedef struct command_data
-{
-    command_type type;
-    void *data;
-    u32 data_size;
-    u32 position;
-} command_data;
-
-typedef struct command_node
-{
-    command_data *command;
-    struct comment_node *next;
-} command_node;
-
-typedef struct command_buffer
-{
-    command_node *head;
-    command_node *tail;
-    u32 command_count;
-} command_buffer;
+    float vertices[36];
+} render_object;
 
 typedef struct renderer
 {
@@ -92,7 +81,9 @@ typedef struct renderer
     unsigned int vao;
     unsigned int vbo;
 
-    command_buffer cb;
+    render_object render_list[MAX_RENDER_OBJECTS];
+    u32 render_list_count;
+
     float vertices[6];
 } renderer;
 
