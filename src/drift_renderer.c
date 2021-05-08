@@ -61,6 +61,18 @@ internal void DetachShader()
     glUseProgram(0);
 }
 
+internal void UploadMatrix4f(shader shader, matrix4f matrix, char *name)
+{
+    int location = glGetUniformLocation(shader, name); 
+    glUniformMatrix4fv(location, 1, GL_FALSE, &matrix.elements[0][0]);
+}
+
+internal void Upload4f(shader shader, v4 vec, char *name)
+{
+    int location = glGetUniformLocation(shader, name);
+    glUniform4f(location, vec.x, vec.y, vec.z, vec.w);
+}
+    
 internal void ClearScreen(v4 color)
 {
     glClearColor(color.r, color.g, color.b, color.a); 
@@ -107,51 +119,123 @@ internal void BeginRenderer(renderer *renderer,
 
     glViewport(0, 0, window_width, window_height);
 
-    renderer->projection_matrix = OrthographicMatrix(0, window_width,
-                                                     window_height, 0,
-                                                     0.f, 100.f);
+    renderer->projection_matrix =
+        OrthographicMatrix(0, window_width, window_height, 0, 0.f, 100.f);
+
     renderer->render_list_count = 0;
 }
 
-internal void UploadMatrix4f(shader shader, matrix4f matrix, char *name)
-{
-    int location = glGetUniformLocation(shader, name); 
-    glUniformMatrix4fv(location, 1, GL_FALSE, &matrix.elements[0][0]);
-}
-
-internal void Upload4f(shader shader, v4 vec, char *name)
-{
-    int location = glGetUniformLocation(shader, name);
-    glUniform4f(location, vec.x, vec.y, vec.z, vec.w);
-}
-    
 internal void SubmitRenderer(renderer *renderer)
 {
+    UploadMatrix4f(renderer->shader, renderer->projection_matrix, "projection");
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
+
     for (int i = 0; i < renderer->render_list_count; ++i)
     {
         render_object obj = renderer->render_list[i];
         switch(obj.type)
         {
+            case RENDER_TYPE_line:
+            {
+                glBufferSubData(GL_ARRAY_BUFFER, 0,
+                                12 * sizeof(float), obj.vertices);
+
+                UseShader(renderer->shader);
+                glBindVertexArray(renderer->vao);
+                glDrawArrays(GL_LINE, 0, 3);
+            } break;
+
+            case RENDER_TYPE_triangle:
+            {
+                glBufferSubData(GL_ARRAY_BUFFER, 0,
+                                18 * sizeof(float), obj.vertices);
+
+                UseShader(renderer->shader);
+                glBindVertexArray(renderer->vao);
+                glDrawArrays(GL_TRIANGLES, 0, 3);
+            } break;
+
             case RENDER_TYPE_rect:
             {
-                UploadMatrix4f(renderer->shader,
-                               renderer->projection_matrix,
-                               "projection");
-
-                // Upload4f(renderer->shader, obj.color, "color");
-
-                glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
-                glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(obj.vertices), obj.vertices);
+                glBufferSubData(GL_ARRAY_BUFFER, 0,
+                                36 * sizeof(float), obj.vertices);
 
                 UseShader(renderer->shader);
                 glBindVertexArray(renderer->vao);
                 glDrawArrays(GL_TRIANGLES, 0, 6);
             } break;
 
-            default:
-                break;
+            default: break;
         }
     }
+}
+
+internal void RenderLine(renderer *renderer, v2 p1, v2 p2, v4 color)
+{
+    render_object obj = {0};
+    {
+        obj.type = RENDER_TYPE_line;
+
+        // Point 1
+        obj.vertices[0] = p1.x;
+        obj.vertices[1] = p1.y;
+
+        obj.vertices[2] = color.r;
+        obj.vertices[3] = color.g;
+        obj.vertices[4] = color.b;
+        obj.vertices[5] = color.a;
+
+        // Point 2
+        obj.vertices[6] = p2.x;
+        obj.vertices[7] = p2.y;
+
+        obj.vertices[8] = color.r;
+        obj.vertices[9] = color.g;
+        obj.vertices[10] = color.b;
+        obj.vertices[11] = color.a;
+    }
+
+    renderer->render_list[renderer->render_list_count] = obj;
+    renderer->render_list_count++;
+}
+
+internal void RenderTriangle(renderer *renderer, v2 p1,
+                             v2 p2, v2 p3, v4 color)
+{
+    render_object obj = {0};
+    {
+        obj.type = RENDER_TYPE_triangle;
+
+        // Bottom Left
+        obj.vertices[0] = p1.x;
+        obj.vertices[1] = p1.y;
+
+        obj.vertices[2] = color.r;
+        obj.vertices[3] = color.g;
+        obj.vertices[4] = color.b;
+        obj.vertices[5] = color.a;
+
+        // Bottom Right
+        obj.vertices[6] = p2.x;
+        obj.vertices[7] = p2.y;
+
+        obj.vertices[8] = color.r;
+        obj.vertices[9] = color.g;
+        obj.vertices[10] = color.b;
+        obj.vertices[11] = color.a;
+        
+        // Top Right
+        obj.vertices[12] = p3.x;
+        obj.vertices[13] = p3.y;
+
+        obj.vertices[14] = color.r;
+        obj.vertices[15] = color.g;
+        obj.vertices[16] = color.b;
+        obj.vertices[17] = color.a;
+    }
+
+    renderer->render_list[renderer->render_list_count] = obj;
+    renderer->render_list_count++;
 }
 
 internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
@@ -159,31 +243,11 @@ internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
     render_object obj = {0};
     {
         obj.type = RENDER_TYPE_rect;
-        obj.position = position;
-        obj.size = size;
-        obj.color = color;
 
         v2 tl = position;
         v2 br = v2(position.x + size.x, position.y + size.y);
 
-        /* Just Position
-        // Bottom Triangle
-        obj.vertices[0] = tl.x;
-        obj.vertices[1] = br.y;
-        obj.vertices[2] = br.x;
-        obj.vertices[3] = br.y;
-        obj.vertices[4] = br.x;
-        obj.vertices[5] = tl.y;
-
-        // Top Triangle
-        obj.vertices[6] = tl.x;
-        obj.vertices[7] = br.y;
-        obj.vertices[8] = br.x;
-        obj.vertices[9] = tl.y;
-        obj.vertices[10] = tl.x;
-        obj.vertices[11] = tl.y;
-        */
-
+        // Bottom Left
         obj.vertices[0] = tl.x;
         obj.vertices[1] = br.y;
 
@@ -192,6 +256,7 @@ internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
         obj.vertices[4] = color.b;
         obj.vertices[5] = color.a;
 
+        // Bottom Right
         obj.vertices[6] = br.x;
         obj.vertices[7] = br.y;
 
@@ -200,6 +265,7 @@ internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
         obj.vertices[10] = color.b;
         obj.vertices[11] = color.a;
         
+        // Top Right
         obj.vertices[12] = br.x;
         obj.vertices[13] = tl.y;
 
@@ -208,6 +274,7 @@ internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
         obj.vertices[16] = color.b;
         obj.vertices[17] = color.a;
 
+        // Bottom Left
         obj.vertices[18] = tl.x;
         obj.vertices[19] = br.y;
 
@@ -216,6 +283,7 @@ internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
         obj.vertices[22] = color.b;
         obj.vertices[23] = color.a;
 
+        // Top Right
         obj.vertices[24] = br.x;
         obj.vertices[25] = tl.y;
 
@@ -224,6 +292,7 @@ internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
         obj.vertices[28] = color.b;
         obj.vertices[29] = color.a;
 
+        // Top Left
         obj.vertices[30] = tl.x;
         obj.vertices[31] = tl.y;
 
@@ -236,4 +305,4 @@ internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
     renderer->render_list[renderer->render_list_count] = obj;
     renderer->render_list_count++;
 }
-    
+

@@ -63,12 +63,25 @@ internal void Update(platform *platform)
         // Update position
         if (test_vel.x != 0 && test_vel.y != 0)
         {
+            // TODO: Maybe change Normalize to work on pointers
             test_vel = V2Normalize(test_vel);
             test_vel = V2Scalar(test_vel, move_speed);
         }
 
+        local_persist b32 space = 0;
+        if (!space && platform->key_down[KEY_space])
+        {
+            space = 1;
+            test_pos.y -= 100;
+        }
+
         test_pos.x += test_vel.x;
-        test_pos.y += test_vel.y;
+        test_pos.y += 9;
+
+        if (!platform->key_down[KEY_space])
+        {
+            space = 0;
+        }
 
         // World boundry collisions
         // TODO: Can change this to clamp
@@ -101,6 +114,8 @@ internal void Update(platform *platform)
 
     RenderRect(&state->renderer, test_pos, v2(32.f, 32.f), v4(1.0f, 0.5f, 0.2f, 1.0f));
     RenderRect(&state->renderer, v2(100, 100), v2(100.f, 100.f), v4(0.5, 0, 0, 1));
+    RenderTriangle(&state->renderer, v2(150, 200), v2(150, 300),
+                   v2(300, 300), v4(0, 0, 1, 1));
     SubmitRenderer(&state->renderer);
 
     platform->SwapBuffers();

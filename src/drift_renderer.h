@@ -55,6 +55,7 @@ typedef unsigned int shader;
 
 typedef enum render_type
 {
+    RENDER_TYPE_line, 
     RENDER_TYPE_triangle,
     RENDER_TYPE_rect,
     RENDER_TYPE_texture
@@ -64,10 +65,6 @@ typedef enum render_type
 typedef struct render_object
 {
     render_type type;
-    v2 position;
-    v2 size;
-    v4 color;
-
     float vertices[36];
 } render_object;
 
@@ -83,8 +80,6 @@ typedef struct renderer
 
     render_object render_list[MAX_RENDER_OBJECTS];
     u32 render_list_count;
-
-    float vertices[6];
 } renderer;
 
 #endif
