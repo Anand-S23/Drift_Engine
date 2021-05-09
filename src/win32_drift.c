@@ -9,7 +9,7 @@
 #include "drift_math.h"
 #include "app.c"
 
-global platform Global_Platform = {0};
+global drift_platform Global_Platform = {0};
 global HDC Global_Device_Context;
 global HGLRC Global_Render_Context;
 global i64 Global_Perf_Count_Frequency;
@@ -462,7 +462,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
 
     if (RegisterClassA(&window_class))
     {
-        drift_application app = DriftInit();
+        drift_application app = DriftMain();
 
         HWND window = CreateWindowExA(0, window_class.lpszClassName, app.name,
                                       WS_OVERLAPPEDWINDOW | WS_VISIBLE, 
@@ -523,6 +523,9 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                 ToggleVSync();
             }
 
+            platform = &Global_Platform;
+            app.Init();
+
             while (Global_Platform.running)
             {
                 Global_Platform.last_time = Global_Platform.current_time;
@@ -534,7 +537,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                     DispatchMessage(&message);
                 }
 
-                Update(&Global_Platform);
+                app.Update();
 
                 LARGE_INTEGER work_counter = Win32GetWallClock();
                 f32 work_seconds_elapsed = Win32GetSecondsElapsed(work_counter, last_counter);

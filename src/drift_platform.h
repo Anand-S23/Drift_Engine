@@ -51,22 +51,13 @@ typedef struct read_file_result
     void *memory;
 } read_file_result;
 
-typedef struct drift_application
-{
-    char name[256];
-    int window_width;
-    int window_height;
-    b32 fullscreen;
-    b32 v_sync;
-} drift_application;
-
 enum {
 #define Key(name, str) KEY_##name,
 #include "drift_key_list.h"
     KEY_MAX
 };
 
-typedef struct platform
+typedef struct drift_platform
 {
     // Options
     b32 running;
@@ -126,6 +117,20 @@ typedef struct platform
     void (*WriteFile)(char *filename, u32 memory_size, void *memory);
     void (*LogWarning)(char *format);
     void (*LogError)(char *message_format, ...);
-} platform;
+} drift_platform;
+
+global drift_platform *platform;
+
+typedef struct drift_application
+{
+    const char *name;
+    int window_width;
+    int window_height;
+    b32 fullscreen;
+    b32 v_sync;
+
+    void (*Init)();
+    void (*Update)();
+} drift_application;
 
 #endif

@@ -7,32 +7,19 @@
 #include "app.h"
 #include "drift_renderer.c"
 
+global app_state *state;
 
-internal drift_application DriftInit()
+internal void InitApp()
 {
-    drift_application app = {0};
-    {
-        strcpy(app.name, "Drift");
-        app.window_width = 1280;
-        app.window_height = 720;
-    }
-
-    return app;
+    state = (app_state *)platform->storage;
+    InitRenderer(&state->renderer);
+    platform->initialized = 1;
 }
 
-internal void Update(platform *platform)
+internal void UpdateApp()
 {
     Assert(sizeof(app_state) <= platform->storage_size);
-    app_state *state = (app_state *)platform->storage;
     state->delta_t = platform->current_time - platform->last_time;
-
-    if (!platform->initialized)
-    {
-        InitRenderer(&state->renderer);
-        platform->initialized = 1;
-
-        platform->LogWarning("Initialized platfrom");
-    }
 
     local_persist v2 test_pos = {0};
     local_persist v2 test_vel = {0};
@@ -119,5 +106,20 @@ internal void Update(platform *platform)
     SubmitRenderer(&state->renderer);
 
     platform->SwapBuffers();
+}
+
+internal drift_application DriftMain()
+{
+    drift_application app = {0};
+    {
+        app.name = "Drift";
+        app.window_width = 1280;
+        app.window_height = 720;
+
+        app.Init = InitApp;
+        app.Update = UpdateApp;
+    }
+
+    return app;
 }
 
