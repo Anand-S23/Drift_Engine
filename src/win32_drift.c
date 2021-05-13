@@ -464,10 +464,28 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
     {
         drift_application app = DriftMain();
 
+        DWORD window_style = (!app.window_style) ?
+            WS_OVERLAPPEDWINDOW | WS_VISIBLE : (DWORD)app.window_style;
+
+        int window_width, window_height;
+
+        if (app.window_exact)
+        {
+            RECT window_rect;
+            AdjustWindowRectEx(&window_rect, window_style, 0, 0);
+            window_width = window_rect.right - window_rect.left;
+            window_height = window_rect.bottom - window_rect.top;
+        }
+        else
+        {
+            window_width = app.window_width;
+            window_height = app.window_height;
+        }
+        
         HWND window = CreateWindowExA(0, window_class.lpszClassName, app.name,
-                                      WS_OVERLAPPEDWINDOW | WS_VISIBLE, 
+                                      window_style, 
                                       CW_USEDEFAULT, CW_USEDEFAULT, 
-                                      app.window_width, app.window_height,
+                                      window_width, window_height,
                                       0, 0, instance, 0);
 
         if (window)

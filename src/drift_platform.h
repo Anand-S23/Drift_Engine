@@ -121,6 +121,33 @@ typedef struct drift_platform
 
 global drift_platform *platform;
 
+typedef enum drift_window_styles
+{
+    DWS_border = 0x00800000L,
+    DWS_caption = 0x00C00000L,
+    DWS_child = 0x40000000L,
+    DWS_clipchildren = 0x02000000L,
+    DWS_clipsiblings = 0x04000000L,
+    DWS_disabled = 0x08000000L,
+    DWS_dlgframe = 0x00400000L,
+    DWS_group = 0x00020000L,
+    DWS_hscroll = 0x00020000L,
+    DWS_maximize = 0x01000000L,
+    DWS_maximizebox = 0x00010000L,
+    DWS_minimize = 0x20000000L,
+    DWS_minimizebox = 0x00020000L,
+    DWS_overlapped = 0x00000000L,
+    DWS_overlappedwindow = (0x00000000L | 0x00C00000L | 0x00080000L |
+                            0x00040000L | 0x00020000L | 0x00010000L),
+    DWS_popup = 0x80000000L,
+    DWS_popupwindow = (0x80000000L | 0x00800000L | 0x00080000L),
+    DWS_sizebox = 0x00040000L,
+    DWS_sysmenu = 0x00080000L,
+    DWS_tabstop = 0x00010000L,
+    DWS_visible = 0x10000000L,
+    DWS_vscroll = 0x00200000L
+} drift_window_styles;
+
 typedef struct drift_application
 {
     const char *name;
@@ -128,6 +155,9 @@ typedef struct drift_application
     int window_height;
     b32 fullscreen;
     b32 v_sync;
+
+    drift_window_styles window_style;
+    b32 window_exact; // TODO: move this to window styles
 
     void (*Init)();
     void (*Update)();

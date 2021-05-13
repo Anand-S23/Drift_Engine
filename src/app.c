@@ -11,6 +11,7 @@ global app_state *state;
 
 internal void InitApp()
 {
+    Assert(sizeof(app_state) <= platform->storage_size);
     state = (app_state *)platform->storage;
     InitRenderer(&state->renderer);
     platform->initialized = 1;
@@ -18,7 +19,6 @@ internal void InitApp()
 
 internal void UpdateApp()
 {
-    Assert(sizeof(app_state) <= platform->storage_size);
     state->delta_t = platform->current_time - platform->last_time;
 
     local_persist v2 test_pos = {0};
@@ -115,6 +115,8 @@ internal drift_application DriftMain()
         app.name = "Drift";
         app.window_width = 1280;
         app.window_height = 720;
+
+        app.window_style = DWS_overlappedwindow | DWS_visible;
 
         app.Init = InitApp;
         app.Update = UpdateApp;
