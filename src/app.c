@@ -34,7 +34,7 @@ internal void UpdateApp()
         {
             test_vel.y += (-move_speed - test_vel.y);
         }
-        if (platform->key_down[KEY_a] || platform->key_down[KEY_left])
+        if (platform->key_release[KEY_a] || platform->key_down[KEY_left])
         {
             test_vel.x += (-move_speed - test_vel.x);
         }
@@ -56,7 +56,7 @@ internal void UpdateApp()
         }
 
         local_persist b32 space = 0;
-        if (!space && platform->key_down[KEY_space])
+        if (platform->key_release[KEY_space])
         {
             space = 1;
             test_pos.y -= 100;
@@ -64,11 +64,6 @@ internal void UpdateApp()
 
         test_pos.x += test_vel.x;
         test_pos.y += 9;
-
-        if (!platform->key_down[KEY_space])
-        {
-            space = 0;
-        }
 
         // World boundry collisions
         // TODO: Can change this to clamp

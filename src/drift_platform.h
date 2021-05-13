@@ -39,6 +39,8 @@ typedef double   f64;
 #define Assert(expr)
 #endif
 
+// TODO: Memset
+
 inline u32 SafeTruncateUInt64(u64 value)
 {
     Assert(value <= 0xFFFFFFFF);
@@ -80,6 +82,7 @@ typedef struct drift_platform
 
     // Input
     b32 key_down[KEY_MAX];
+    b32 key_release[KEY_MAX];
 
     f32 mouse_x;
     f32 mouse_y;

@@ -287,6 +287,9 @@ LRESULT CALLBACK Win32WindowProc(HWND window, UINT message,
 {
     LRESULT result = 0; 
 
+    // local_persist u32 last_was_down = 0;
+    // Global_Platform.key_release[last_was_down] = 0;
+
     switch (message)
     {
         case WM_CLOSE: 
@@ -417,6 +420,8 @@ LRESULT CALLBACK Win32WindowProc(HWND window, UINT message,
                 }
 
                 Global_Platform.key_down[key_index] = is_down;
+                Global_Platform.key_release[key_index] = was_down;
+                // last_was_down = key_index;
             }
 
             b32 alt_key_was_down = ((l_param & (1 << 29)) != 0);
@@ -548,6 +553,13 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
             {
                 Global_Platform.last_time = Global_Platform.current_time;
                 Global_Platform.current_time += 1.f / target_fps;
+
+                // Clear key release
+                for (int i = 0; i < ArraySize(Global_Platform.key_release); ++i)
+                {
+                    Global_Platform.key_release[i] = 0;
+                }
+
                 MSG message;
                 while(PeekMessage(&message, 0, 0, 0, PM_REMOVE))
                 {
