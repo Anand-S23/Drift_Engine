@@ -4,14 +4,12 @@
 #include <math.h>
 #include <time.h>
 
-#include <drift.h>
-#include <drift_renderer.c>
-
 #include "app.h"
+#include "drift_renderer.c"
 
 global app_state *state;
 
-INIT_APP(Init)
+internal void InitApp()
 {
     Assert(sizeof(app_state) <= platform->storage_size);
     state = (app_state *)platform->storage;
@@ -19,8 +17,10 @@ INIT_APP(Init)
     platform->initialized = 1;
 }
 
-UPDATE_APP(Update)
+internal void UpdateApp()
 {
+    state->delta_t = platform->current_time - platform->last_time;
+
     local_persist v2 test_pos = {0};
     local_persist v2 test_vel = {0};
 
@@ -103,7 +103,7 @@ UPDATE_APP(Update)
     platform->SwapBuffers();
 }
 
-DRIFT_MAIN(DriftMain)
+internal drift_application DriftMain()
 {
     drift_application app = {0};
     {
@@ -112,9 +112,11 @@ DRIFT_MAIN(DriftMain)
         app.window_height = 720;
 
         app.window_style = DWS_overlappedwindow | DWS_visible;
+
+        app.Init = InitApp;
+        app.Update = UpdateApp;
     }
 
-    platform = platform_;
     return app;
 }
 

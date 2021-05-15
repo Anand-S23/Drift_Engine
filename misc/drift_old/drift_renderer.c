@@ -1,4 +1,3 @@
-#include <glad/glad.h>
 #include "drift_renderer.h"
 
 // TODO: Create shader from file
@@ -82,11 +81,6 @@ internal void ClearScreen(v4 color)
 
 internal void InitRenderer(renderer *renderer)
 {
-    if (!gladLoadGL()) 
-    {
-        // TODO: Logging
-    }
-
     renderer->shader = CreateShader(default_vertex_shader,
                                     default_fragment_shader);
 

@@ -5,76 +5,15 @@
 #include <glad/glad.h>
 #include <wglext.h>
 
-#include "drift.h"
-#include "win32_drift.h"
+#include "drift_platform.h"
+#include "drift_math.h"
+#include "app.c"
 
 global drift_platform Global_Platform = {0};
 global HDC Global_Device_Context;
 global HGLRC Global_Render_Context;
 global i64 Global_Perf_Count_Frequency;
 global WINDOWPLACEMENT Global_WindowPosition = { sizeof(Global_WindowPosition) };
-
-// App Code
-internal FILETIME Win32GetLastWriteTime(char *filename)
-{
-    FILETIME last_write_time = {0};
-    WIN32_FIND_DATA find_data;
-    HANDLE find_handle = FindFirstFileA(filename, &find_data);
-
-    if (find_handle != INVALID_HANDLE_VALUE)
-    {
-        FindClose(find_handle);
-        last_write_time = find_data.ftLastWriteTime;
-    }
-
-    return last_write_time;
-}
-
-internal win32_app_code Win32LoadAppCode()
-{
-    win32_app_code app_code = {0};
-
-    // CopyFile(Global_DLL_Path, Global_Temp_DLL_Path, 0);
-    // app_code.dll = LoadLibraryA(Global_Temp_DLL_Path);
-    // app_code.dll_last_write_time = Win32GetLastWriteTime(Global_DLL_Path);
-
-    app_code.dll = LoadLibraryA("drift.dll");
-    
-    if (!app_code.dll)
-    {
-        return app_code;
-    }
-    
-    app_code.Init = (void *)GetProcAddress(app_code.dll, "Init");
-    app_code.Update = (void *)GetProcAddress(app_code.dll, "Update");
-    app_code.DriftMain = (void *)GetProcAddress(app_code.dll, "DriftMain");
-    
-    if (!app_code.Init || !app_code.Update|| !app_code.DriftMain)
-    {
-        app_code.Init = InitAppStub;
-        app_code.Update = UpdateAppStub;
-        app_code.DriftMain = DriftMainStub;
-        return app_code;
-    }
-
-    app_code.is_valid = 1;
-    return app_code;
-}
-
-internal void Win32AppCodeUnload(win32_app_code *app_code)
-{
-    if(app_code->dll)
-    {
-        FreeLibrary(app_code->dll);
-    }
-
-    app_code->Init = InitAppStub;
-    app_code->Update = UpdateAppStub;
-    app_code->DriftMain = DriftMainStub;
-    
-    app_code->dll = 0;
-    app_code->is_valid = 0;
-}
 
 // OpenGL
 internal void *Win32LoadOpenGLProcedure(char *name)
@@ -131,6 +70,11 @@ internal b32 Win32InitOpenGL(HDC *device_context, HINSTANCE instance)
 
     Win32LoadWGLFunctions(instance);
     
+    if (!gladLoadGL()) 
+    {
+        // TODO: Logging
+    }
+
     return result;
 }
 
@@ -338,35 +282,6 @@ internal void ToggleFullscreen(HWND window)
     }
 }
 
-internal void LoadDriftApplicationDefaults(drift_application *app)
-{
-    if (!app->name)
-    {
-        app->name = "App";
-    }
-
-    if (!app->window_width)
-    {
-        app->window_width = 1280;
-    }
-
-    if (!app->window_height)
-    {
-        app->window_height = 720;
-    }
-        
-    app->window_style = (!app->window_style) ?
-        WS_OVERLAPPEDWINDOW : app->window_style;
-
-    if (app->window_exact)
-    {
-        RECT window_rect;
-        AdjustWindowRectEx(&window_rect, (DWORD)app->window_style, 0, 0);
-        app->window_width = window_rect.right - window_rect.left;
-        app->window_height = window_rect.bottom - window_rect.top;
-    }
-}
-
 LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, 
                                  WPARAM w_param, LPARAM l_param)
 {
@@ -552,15 +467,30 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
 
     if (RegisterClassA(&window_class))
     {
-        win32_app_code app_code = Win32LoadAppCode();
+        drift_application app = DriftMain();
 
-        drift_application app = app_code.DriftMain(&Global_Platform);
-        LoadDriftApplicationDefaults(&app);
+        DWORD window_style = (!app.window_style) ?
+            WS_OVERLAPPEDWINDOW | WS_VISIBLE : (DWORD)app.window_style;
 
+        int window_width, window_height;
+
+        if (app.window_exact)
+        {
+            RECT window_rect;
+            AdjustWindowRectEx(&window_rect, window_style, 0, 0);
+            window_width = window_rect.right - window_rect.left;
+            window_height = window_rect.bottom - window_rect.top;
+        }
+        else
+        {
+            window_width = app.window_width;
+            window_height = app.window_height;
+        }
+        
         HWND window = CreateWindowExA(0, window_class.lpszClassName, app.name,
-                                      (DWORD)app.window_style, 
+                                      window_style, 
                                       CW_USEDEFAULT, CW_USEDEFAULT, 
-                                      app.window_width, app.window_height,
+                                      window_width, window_height,
                                       0, 0, instance, 0);
 
         if (window)
@@ -616,8 +546,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                 ToggleVSync();
             }
 
-            // platform = &Global_Platform;
-            app_code.Init();
+            platform = &Global_Platform;
+            app.Init();
 
             while (Global_Platform.running)
             {
@@ -637,7 +567,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                     DispatchMessage(&message);
                 }
 
-                app_code.Update();
+                app.Update();
 
                 LARGE_INTEGER work_counter = Win32GetWallClock();
                 f32 work_seconds_elapsed = Win32GetSecondsElapsed(work_counter, last_counter);

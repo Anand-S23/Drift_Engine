@@ -1,6 +1,8 @@
 #ifndef APP_H
 #define APP_H
 
+#include "drift_renderer.h"
+
 typedef struct app_state
 {
     // memory_arena permanent_arena;
