@@ -5,6 +5,9 @@
 #define local_persist static
 #define global static 
 
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
 #include <stdint.h>
 
 typedef int8_t   i8;
@@ -39,7 +42,10 @@ typedef double   f64;
 #define Assert(expr)
 #endif
 
+#define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
+
 #include "drift_math.h"
+#include "drift_renderer.c"
 
 // TODO: Memset
 
@@ -120,11 +126,47 @@ typedef struct drift_platform
     read_file_result (*ReadFile)(char *filename);
     void (*FreeFileMemory)(void *memory);
     void (*WriteFile)(char *filename, u32 memory_size, void *memory);
-    void (*LogWarning)(char *format);
-    void (*LogError)(char *message_format, ...);
+    void (*Log)(char *file, int line, char *format, ...);
+    void (*LogWarning)(char *file, int line, char *format, ...);
+    void (*LogError)(char *file, int line, char *format, ...);
 } drift_platform;
 
 global drift_platform *platform;
+
+#define LOG_WARNING (1 << 0)
+#define LOG_ERROR (1 << 1)
+
+void _DriftLogInternal(int type, char *file, int line, char *format, ...)
+{
+    if (platform)
+    {
+        if (type & LOG_WARNING)
+        {
+            va_list args;
+            va_start(args, format);
+            platform->LogWarning(file, line, format, args);
+            va_end(args);
+        }
+        else if (type & LOG_ERROR)
+        {
+            va_list args;
+            va_start(args, format);
+            platform->LogError(file, line, format, args);
+            va_end(args);
+        }
+        else
+        {
+            va_list args;
+            va_start(args, format);
+            platform->Log(file, line, format, args);
+            va_end(args);
+        }
+    }
+}
+
+#define DriftLog(...) platform->Log(__FILENAME__, __LINE__, __VA_ARGS__)
+#define DriftLogWarning(...) platform->LogWarning(__FILENAME__, __LINE__, __VA_ARGS__)
+#define DriftLogError(...) platform->LogError(__FILENAME__, __LINE__, __VA_ARGS__)
 
 typedef enum drift_window_styles
 {
@@ -180,6 +222,5 @@ DRIFT_MAIN(DriftMainStub)
     drift_application app = {0};
     return app;
 }
-
 
 #endif

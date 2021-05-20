@@ -9,6 +9,8 @@
 #define EULERS_NUMBER 2.7182818284590452353602874713527
 #define EULERS_NUMBERf 2.7182818284590452353602874713527f
 
+// Vector Math
+
 typedef union v2 
 {
     struct
@@ -183,37 +185,37 @@ static v4 V4Sub(v4 vec1, v4 vec2)
     return vec1;
 }
 
-static float V2Magnitude(v2 v)
+static float V2Magnitude(v2 vec)
 {
-    return sqrt(v.x * v.x + v.y * v.y);
+    return sqrt(vec.x * vec.x + vec.y * vec.y);
 }
 
-static v2 V2Normalize(v2 v)
+static v2 V2Normalize(v2 vec)
 {
-    float scalar = 1.f / V2Magnitude(v);
-    return V2Scalar(v, scalar);
+    float scalar = 1.f / V2Magnitude(vec);
+    return V2Scalar(vec, scalar);
 }
 
-static float V3Magnitude(v3 v)
+static float V3Magnitude(v3 vec)
 {
-    return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 }
 
-static v3 V3Normalize(v3 v)
+static v3 V3Normalize(v3 vec)
 {
-    float scalar = 1.f / V3Magnitude(v);
-    return V3Scalar(v, scalar);
+    float scalar = 1.f / V3Magnitude(vec);
+    return V3Scalar(vec, scalar);
 }
 
-static float V4Magnitude(v4 v)
+static float V4Magnitude(v4 vec)
 {
-    return sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
+    return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z + vec.w * vec.w);
 }
 
-static v4 V4Normalize(v4 v)
+static v4 V4Normalize(v4 vec)
 {
-    float scalar = 1.f / V4Magnitude(v);
-    return V4Scalar(v, scalar);
+    float scalar = 1.f / V4Magnitude(vec);
+    return V4Scalar(vec, scalar);
 }
 
 static float V2Dot(v2 vec1, v2 vec2)
@@ -224,6 +226,18 @@ static float V2Dot(v2 vec1, v2 vec2)
 static float V3Dot(v3 vec1, v3 vec2)
 {
     return vec1.x * vec2.x + vec1.y * vec2.y + vec1.z * vec2.z; 
+}
+
+static float V4Dot(v4 vec1, v4 vec2)
+{
+    return vec1.x * vec2.x + vec1.y * vec2.y + vec1.z * vec2.z + vec1.w * vec2.w;
+}
+
+static v3 V3Cross(v3 vec1, v3 vec2)
+{
+    return v3(vec1.y * vec2.z - vec1.z * vec2.y,
+              vec1.z * vec2.x - vec1.x * vec2.z,
+              vec1.x * vec2.y - vec1.y * vec2.x);
 }
 
 typedef struct matrix4f

@@ -34,9 +34,9 @@ internal win32_app_code Win32LoadAppCode()
 {
     win32_app_code app_code = {0};
 
-    // CopyFile(Global_DLL_Path, Global_Temp_DLL_Path, 0);
-    // app_code.dll = LoadLibraryA(Global_Temp_DLL_Path);
-    // app_code.dll_last_write_time = Win32GetLastWriteTime(Global_DLL_Path);
+    // CopyFile("drift.dll", "drift_temp.dll", 0);
+    // app_code.dll = LoadLibraryA("drift_temp.dll");
+    // app_code.dll_last_write_time = Win32GetLastWriteTime("drift.dll");
 
     app_code.dll = LoadLibraryA("drift.dll");
     
@@ -74,6 +74,48 @@ internal void Win32AppCodeUnload(win32_app_code *app_code)
     
     app_code->dll = 0;
     app_code->is_valid = 0;
+}
+
+// Logging
+internal void Win32LogInternal(char *type, char *file, int line,
+                               char *format, ...)
+{
+    char str_buffer[4096] = {0};
+    char text[4000] = {0};
+
+    va_list args;
+    va_start(args, format);
+    wsprintf(text, format, args);
+    va_end(args);
+
+    wsprintf(str_buffer, "[%s] (%s:%d) - %s\n", type, file, line, text);
+    OutputDebugStringA(str_buffer);
+}
+
+internal void Win32Log(char *file, int line, char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    Win32LogInternal("INFO", file, line, format, args);
+    va_end(args);
+}
+
+internal void Win32LogWarning(char *file, int line, char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    Win32LogInternal("WARNING", file, line, format, args);
+    va_end(args);
+}
+
+internal void Win32LogError(char *file, int line, char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    Win32LogInternal("ERROR", file, line, format, args);
+    va_end(args);
+
+    // MessageBoxA(0, text, "Error", MB_OK);
 }
 
 // OpenGL
@@ -233,54 +275,6 @@ internal b32 Win32WriteFile(char *filename, u32 memory_size, void *memory)
     }
 
     return result;
-}
-
-// Logging
-internal void Win32LogWarning(char *format, ...)
-{
-    char str_buffer[4096];
-    wsprintf(str_buffer, "[WARNING] - ");
-
-    va_list args;
-    va_start(args, format);
-    u32 required_characters = vsnprintf(0, 0, format, args)+1;
-    va_end(args);
-    
-    wsprintf(str_buffer, format, args);
-    char text[4096] = {0};
-    if(required_characters > 4096)
-    {
-        required_characters = 4096;
-    }
-    
-    va_start(args, format);
-    vsnprintf(text, required_characters, str_buffer, args);
-    va_end(args);
-    
-    text[required_characters-1] = 0;
-    OutputDebugStringA(str_buffer);
-}
-
-internal void Win32LogError(char *format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    u32 required_characters = vsnprintf(0, 0, format, args)+1;
-    va_end(args);
-    
-    char text[4096] = {0};
-    if(required_characters > 4096)
-    {
-        required_characters = 4096;
-    }
-    
-    va_start(args, format);
-    vsnprintf(text, required_characters, format, args);
-    va_end(args);
-    
-    text[required_characters-1] = 0;
-    MessageBoxA(0, text, "Error", MB_OK);
-    OutputDebugStringA(text);
 }
 
 // Time
@@ -535,6 +529,8 @@ LRESULT CALLBACK Win32WindowProc(HWND window, UINT message,
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, 
                    LPSTR cmd_line, int cmd_show)
 {
+    win32_app_code app_code = Win32LoadAppCode();
+
     WNDCLASSA window_class = {0};
     {
         window_class.style = CS_HREDRAW | CS_VREDRAW;
@@ -552,8 +548,6 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
 
     if (RegisterClassA(&window_class))
     {
-        win32_app_code app_code = Win32LoadAppCode();
-
         drift_application app = app_code.DriftMain(&Global_Platform);
         LoadDriftApplicationDefaults(&app);
 
@@ -602,6 +596,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                 Global_Platform.ReadFile = Win32ReadFile;
                 Global_Platform.FreeFileMemory = Win32FreeFileMemory;
                 Global_Platform.WriteFile = Win32WriteFile;
+                Global_Platform.Log = Win32Log;
                 Global_Platform.LogWarning = Win32LogWarning;
                 Global_Platform.LogError = Win32LogError;
             }
