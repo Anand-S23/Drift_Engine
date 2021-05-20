@@ -77,45 +77,37 @@ internal void Win32AppCodeUnload(win32_app_code *app_code)
 }
 
 // Logging
-internal void Win32LogInternal(char *type, char *file, int line,
+internal void Win32LogInternal(int type, char *file, int line,
                                char *format, ...)
 {
+    char *type_message = "INFO";
+    b32 message_box = 0;
+
+    if (type & LOG_WARNING)
+    {
+        type_message = "WARNING";
+    }
+    else if (type & LOG_ERROR)
+    {
+        type_message = "ERROR";
+        message_box = 1; 
+    }
+
     char str_buffer[4096] = {0};
     char text[4000] = {0};
 
     va_list args;
     va_start(args, format);
-    wsprintf(text, format, args);
+    vsnprintf(text, 4000, format, args);
     va_end(args);
 
-    wsprintf(str_buffer, "[%s] (%s:%d) - %s\n", type, file, line, text);
+    wsprintf(str_buffer, "[%s] (%s:%d) - %s\n", type_message, file, line, text);
     OutputDebugStringA(str_buffer);
-}
 
-internal void Win32Log(char *file, int line, char *format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    Win32LogInternal("INFO", file, line, format, args);
-    va_end(args);
-}
-
-internal void Win32LogWarning(char *file, int line, char *format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    Win32LogInternal("WARNING", file, line, format, args);
-    va_end(args);
-}
-
-internal void Win32LogError(char *file, int line, char *format, ...)
-{
-    va_list args;
-    va_start(args, format);
-    Win32LogInternal("ERROR", file, line, format, args);
-    va_end(args);
-
-    // MessageBoxA(0, text, "Error", MB_OK);
+    if (message_box)
+    {
+        MessageBoxA(0, text, "Error", MB_OK);
+    }
 }
 
 // OpenGL
@@ -223,26 +215,26 @@ internal read_file_result Win32ReadFile(char *filename)
                 } 
                 else 
                 {
-                    // TODO: logging
+                    W32LogError("Read file fail");
                     Win32FreeFileMemory(result.memory);
                     result.memory = 0;
                 }
             } 
             else 
             {
-                // TODO: logging
+                W32LogError("Read file memory allocation failed");
             }
         } 
         else 
         {
-            // TODO: logging
+            W32LogError("GetFileSizeEx fail");
         }
 
         CloseHandle(file_handle);
     } 
     else
     {
-        // TODO: logging
+        W32LogError("Invalid file handle");
     }
 
     return result;
@@ -264,14 +256,14 @@ internal b32 Win32WriteFile(char *filename, u32 memory_size, void *memory)
         } 
         else 
         {
-            // TODO: logging
+            W32LogError("Write file fail");
         }
 
         CloseHandle(file_handle);
     } 
     else
     {
-        // TODO: logging
+        W32LogError("Invalid file handle");
     }
 
     return result;
@@ -596,9 +588,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                 Global_Platform.ReadFile = Win32ReadFile;
                 Global_Platform.FreeFileMemory = Win32FreeFileMemory;
                 Global_Platform.WriteFile = Win32WriteFile;
-                Global_Platform.Log = Win32Log;
-                Global_Platform.LogWarning = Win32LogWarning;
-                Global_Platform.LogError = Win32LogError;
+                Global_Platform.Log = Win32LogInternal;
             }
 
             if (Global_Platform.fullscreen)
@@ -654,7 +644,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                 else
                 {
                     // NOTE: Miss frame
-                    // TODO: Logging
+                    W32LogWarning("Frame missed");
                 }
 
                 LARGE_INTEGER end_counter = Win32GetWallClock();
@@ -678,12 +668,12 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
         }
         else
         {
-            // TODO: Logging
+            W32LogError("Invaild window");
         }
     }
     else 
     {
-        // TODO: Logging
+        W32LogError("Window registeration fail");
     }
 
     return 0; 

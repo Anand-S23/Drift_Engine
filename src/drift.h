@@ -126,47 +126,21 @@ typedef struct drift_platform
     read_file_result (*ReadFile)(char *filename);
     void (*FreeFileMemory)(void *memory);
     void (*WriteFile)(char *filename, u32 memory_size, void *memory);
-    void (*Log)(char *file, int line, char *format, ...);
-    void (*LogWarning)(char *file, int line, char *format, ...);
-    void (*LogError)(char *file, int line, char *format, ...);
+    void (*Log)(int type, char *file, int line, char *format, ...);
 } drift_platform;
 
 global drift_platform *platform;
 
-#define LOG_WARNING (1 << 0)
-#define LOG_ERROR (1 << 1)
-
-void _DriftLogInternal(int type, char *file, int line, char *format, ...)
+enum
 {
-    if (platform)
-    {
-        if (type & LOG_WARNING)
-        {
-            va_list args;
-            va_start(args, format);
-            platform->LogWarning(file, line, format, args);
-            va_end(args);
-        }
-        else if (type & LOG_ERROR)
-        {
-            va_list args;
-            va_start(args, format);
-            platform->LogError(file, line, format, args);
-            va_end(args);
-        }
-        else
-        {
-            va_list args;
-            va_start(args, format);
-            platform->Log(file, line, format, args);
-            va_end(args);
-        }
-    }
-}
+    LOG = 0,
+    LOG_WARNING = (1 << 0),
+    LOG_ERROR = (1 << 1)
+};
 
-#define DriftLog(...) platform->Log(__FILENAME__, __LINE__, __VA_ARGS__)
-#define DriftLogWarning(...) platform->LogWarning(__FILENAME__, __LINE__, __VA_ARGS__)
-#define DriftLogError(...) platform->LogError(__FILENAME__, __LINE__, __VA_ARGS__)
+#define DriftLog(...) platform->Log(LOG, __FILENAME__, __LINE__, __VA_ARGS__)
+#define DriftLogWarning(...) platform->Log(LOG_WARNING, __FILENAME__, __LINE__, __VA_ARGS__)
+#define DriftLogError(...) platform->Log(LOG_ERROR, __FILENAME__, __LINE__, __VA_ARGS__)
 
 typedef enum drift_window_styles
 {

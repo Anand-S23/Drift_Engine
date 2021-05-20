@@ -15,12 +15,8 @@ INIT_APP(Init)
     Assert(sizeof(app_state) <= platform->storage_size);
     state = (app_state *)platform->storage;
     InitRenderer(&state->renderer);
-    int x = 5;
 
-    DriftLog("This is another test! %d Let's try this.", 5);
-    DriftLogWarning("%s", "another thing to try");
-    DriftLogError("Also trying %d: ", x);
-
+    DriftLog("Initialized");
     platform->initialized = 1;
 }
 
