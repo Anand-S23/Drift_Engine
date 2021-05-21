@@ -1,7 +1,5 @@
 #include <windows.h> 
 #include <xinput.h>
-#include <stdio.h>
-
 #include <glad/glad.h>
 #include <wglext.h>
 
@@ -13,6 +11,26 @@ global HDC Global_Device_Context;
 global HGLRC Global_Render_Context;
 global i64 Global_Perf_Count_Frequency;
 global WINDOWPLACEMENT Global_WindowPosition = { sizeof(Global_WindowPosition) };
+
+// X Input get state
+#define X_INPUT_GET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_STATE *pState)
+typedef X_INPUT_GET_STATE(x_input_get_state); 
+X_INPUT_GET_STATE(XInputGetStateStub)
+{
+    return ERROR_DEVICE_NOT_CONNECTED; 
+}
+global x_input_get_state *XInputGetState_ = XInputGetStateStub;
+#define XInputGetState XInputGetState_ 
+
+// X Input set state
+#define X_INPUT_SET_STATE(name) DWORD WINAPI name(DWORD dwUserIndex, XINPUT_VIBRATION *pVibration)
+typedef X_INPUT_SET_STATE(x_input_set_state); 
+X_INPUT_SET_STATE(XInputSetStateStub)
+{
+    return ERROR_DEVICE_NOT_CONNECTED; 
+}
+global x_input_set_state *XInputSetState_ = XInputSetStateStub;
+#define XInputSetState XInputSetState_ 
 
 // App Code
 internal FILETIME Win32GetLastWriteTime(char *filename)
@@ -110,80 +128,6 @@ internal void Win32LogInternal(int type, char *file, int line,
     }
 }
 
-// OpenGL
-internal void *Win32LoadOpenGLProcedure(char *name)
-{
-    void *p = (void *)wglGetProcAddress(name);
-
-    if(!p || p == (void *)0x1 || p == (void *)0x2 ||
-       p == (void *)0x3 || p == (void *) - 1)
-    {
-        return 0;
-    }
-
-    return p;
-}
-
-PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB;
-PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
-PFNWGLMAKECONTEXTCURRENTARBPROC wglMakeContextCurrentARB;
-PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
-
-internal void Win32LoadWGLFunctions(HINSTANCE instance)
-{
-    wglChoosePixelFormatARB    = (PFNWGLCHOOSEPIXELFORMATARBPROC)    Win32LoadOpenGLProcedure("wglChoosePixelFormatARB");
-    wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC) Win32LoadOpenGLProcedure("wglCreateContextAttribsARB");
-    wglMakeContextCurrentARB   = (PFNWGLMAKECONTEXTCURRENTARBPROC)   Win32LoadOpenGLProcedure("wglMakeContextCurrentARB");
-    wglSwapIntervalEXT         = (PFNWGLSWAPINTERVALEXTPROC)         Win32LoadOpenGLProcedure("wglSwapIntervalEXT");
-}
-
-internal b32 Win32InitOpenGL(HDC *device_context, HINSTANCE instance)
-{
-    b32 result = 0;
-    
-    PIXELFORMATDESCRIPTOR pfd = {0};
-    {
-        pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
-        pfd.nVersion = 1;
-        pfd.iPixelType = PFD_TYPE_RGBA;
-        pfd.dwFlags = PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER;
-        pfd.cColorBits = 32;
-        pfd.cAlphaBits = 8;
-        pfd.iLayerType = PFD_MAIN_PLANE;
-    }
-
-    int format_index = ChoosePixelFormat(*device_context, &pfd);
-
-    PIXELFORMATDESCRIPTOR pixel_format;
-    DescribePixelFormat(*device_context, format_index,
-                        sizeof(PIXELFORMATDESCRIPTOR), &pixel_format);
-
-    SetPixelFormat(*device_context, format_index, &pixel_format);
-
-    HGLRC gl_rc = wglCreateContext(*device_context);
-    wglMakeCurrent(*device_context, gl_rc);
-
-    Win32LoadWGLFunctions(instance);
-    
-    return result;
-}
-
-internal void Win32CleanUpOpenGL(HDC *device_context)
-{
-    wglMakeCurrent(*device_context, 0);
-    wglDeleteContext(Global_Render_Context);
-}
-
-internal void Win32SwapBuffers(void)
-{
-    wglSwapLayerBuffers(Global_Device_Context, WGL_SWAP_MAIN_PLANE);
-}
-
-internal void ToggleVSync()
-{
-    wglSwapIntervalEXT(Global_Platform.v_sync);
-}
-        
 // Files
 internal void Win32FreeFileMemory(void *memory)
 {
@@ -269,6 +213,100 @@ internal b32 Win32WriteFile(char *filename, u32 memory_size, void *memory)
     return result;
 }
 
+// X Input
+internal void Win32LoadXInput()
+{
+    HMODULE xinput_library = LoadLibrary("xinput1_4.dll");
+    if (!xinput_library) 
+    { 
+        HMODULE xinput_library = LoadLibrary("xinput1_3.dll"); 
+    }
+
+    if (xinput_library)
+    {
+        XInputGetState = (x_input_get_state *)GetProcAddress(xinput_library, "XInputGetState");
+        XInputSetState = (x_input_set_state *)GetProcAddress(xinput_library, "XInputSetState");
+    }
+    else 
+    {
+        W32LogWarning("xinput library load fail");
+    }
+}
+
+// OpenGL
+internal void *Win32LoadOpenGLProcedure(char *name)
+{
+    void *p = (void *)wglGetProcAddress(name);
+
+    if(!p || p == (void *)0x1 || p == (void *)0x2 ||
+       p == (void *)0x3 || p == (void *) - 1)
+    {
+        return 0;
+    }
+
+    return p;
+}
+
+PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB;
+PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
+PFNWGLMAKECONTEXTCURRENTARBPROC wglMakeContextCurrentARB;
+PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
+
+internal void Win32LoadWGLFunctions(HINSTANCE instance)
+{
+    wglChoosePixelFormatARB    = (PFNWGLCHOOSEPIXELFORMATARBPROC)    Win32LoadOpenGLProcedure("wglChoosePixelFormatARB");
+    wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC) Win32LoadOpenGLProcedure("wglCreateContextAttribsARB");
+    wglMakeContextCurrentARB   = (PFNWGLMAKECONTEXTCURRENTARBPROC)   Win32LoadOpenGLProcedure("wglMakeContextCurrentARB");
+    wglSwapIntervalEXT         = (PFNWGLSWAPINTERVALEXTPROC)         Win32LoadOpenGLProcedure("wglSwapIntervalEXT");
+}
+
+internal b32 Win32InitOpenGL(HDC *device_context, HINSTANCE instance)
+{
+    b32 result = 0;
+    
+    PIXELFORMATDESCRIPTOR pfd = {0};
+    {
+        pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+        pfd.nVersion = 1;
+        pfd.iPixelType = PFD_TYPE_RGBA;
+        pfd.dwFlags = PFD_SUPPORT_OPENGL | PFD_DRAW_TO_WINDOW | PFD_DOUBLEBUFFER;
+        pfd.cColorBits = 32;
+        pfd.cAlphaBits = 8;
+        pfd.iLayerType = PFD_MAIN_PLANE;
+    }
+
+    int format_index = ChoosePixelFormat(*device_context, &pfd);
+
+    PIXELFORMATDESCRIPTOR pixel_format;
+    DescribePixelFormat(*device_context, format_index,
+                        sizeof(PIXELFORMATDESCRIPTOR), &pixel_format);
+
+    SetPixelFormat(*device_context, format_index, &pixel_format);
+
+    HGLRC gl_rc = wglCreateContext(*device_context);
+    wglMakeCurrent(*device_context, gl_rc);
+
+    Win32LoadWGLFunctions(instance);
+    
+    return result;
+}
+
+internal void Win32CleanUpOpenGL(HDC *device_context)
+{
+    wglMakeCurrent(*device_context, 0);
+    wglDeleteContext(Global_Render_Context);
+}
+
+internal void Win32SwapBuffers(void)
+{
+    wglSwapLayerBuffers(Global_Device_Context, WGL_SWAP_MAIN_PLANE);
+}
+
+internal void ToggleVSync()
+{
+    wglSwapIntervalEXT(Global_Platform.v_sync);
+}
+        
 // Time
 inline LARGE_INTEGER Win32GetWallClock()
 {
@@ -346,7 +384,7 @@ internal void LoadDriftApplicationDefaults(drift_application *app)
 
     if (app->window_exact)
     {
-        RECT window_rect;
+        RECT window_rect = {0, 0, app->window_width, app->window_height};
         AdjustWindowRectEx(&window_rect, (DWORD)app->window_style, 0, 0);
         app->window_width = window_rect.right - window_rect.left;
         app->window_height = window_rect.bottom - window_rect.top;
@@ -542,6 +580,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
     {
         drift_application app = app_code.DriftMain(&Global_Platform);
         LoadDriftApplicationDefaults(&app);
+        Win32LoadXInput();
 
         HWND window = CreateWindowExA(0, window_class.lpszClassName, app.name,
                                       (DWORD)app.window_style, 

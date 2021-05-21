@@ -61,11 +61,70 @@ typedef struct read_file_result
     void *memory;
 } read_file_result;
 
-enum {
+enum
+{
 #define Key(name, str) KEY_##name,
 #include "drift_key_list.h"
     KEY_MAX
 };
+
+enum
+{
+#define Button(name, str) BUTTON_##name,
+    Button(up, "Up")
+    Button(down, "Down")
+    Button(left, "Left")
+    Button(right, "Right")
+
+    Button(a, "A")
+    Button(b, "B")
+    Button(x, "X")
+    Button(y, "Y")
+
+    Button(left_shoulder, "Left Shoulder")
+    Button(right_shoulder, "Right Shoulder")
+    Button(start, "Start")
+    Button(back, "Back")
+#undef Button
+    BUTTON_MAX
+};
+                                                                                      Button(back;
+typedef struct button_state
+{
+    int half_transitions;
+    b32 ended_down;
+} button_state;
+
+typedef struct controller_input
+{
+    b32 is_connected;
+    b32 is_analog;
+    f32 stick_average_x;
+    f32 stick_average_y;
+
+    union {
+        button_state buttons[BUTTON_MAX];
+
+        struct
+        {
+            button_state up;
+            button_state down;
+            button_state left;
+            button_state right;
+
+            button_state a_button;
+            button_state b_button;
+            button_state x_button;
+            button_state y_button;
+
+            button_state left_shoulder;
+            button_state right_shoulder;
+
+            button_state start;
+            button_state back;
+        };
+    };
+} controller_input;
 
 typedef struct drift_platform
 {
@@ -99,26 +158,7 @@ typedef struct drift_platform
     b32 middle_mouse_down;
     i16 wheel_delta;
 
-    // TODO: Gamepad sticks/triggers
-    struct
-    {
-        b32 back;
-        b32 start;
-        b32 right_shoulder;
-        b32 left_shoulder;
-        b32 right_thumb;
-        b32 left_thumb;
-
-        b32 d_pad_up;
-        b32 d_pad_down;
-        b32 d_pad_right;
-        b32 d_pad_left;
-
-        b32 button_a;
-        b32 button_b;
-        b32 button_x;
-        b32 button_y;
-    } gamepad;
+    controller_input controller;
 
     // Functions
     void (*SwapBuffers)(void); 

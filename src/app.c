@@ -113,6 +113,7 @@ DRIFT_MAIN(DriftMain)
         app.window_height = 720;
 
         app.window_style = DWS_overlappedwindow | DWS_visible;
+        app.window_exact = 1;
     }
 
     platform = platform_;
