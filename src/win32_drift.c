@@ -391,6 +391,105 @@ internal void LoadDriftApplicationDefaults(drift_application *app)
     }
 }
 
+internal f32 Win32ProcessInputStickValue(SHORT value, SHORT deadzone)
+{
+    f32 result = 0; 
+
+    if (value < -deadzone)
+    {
+        result = (f32)value / 32768.0f;
+    }
+    else if (value > deadzone)
+    {
+        result = (f32)value / 32768.0f;
+    }
+
+    return result;
+}
+
+internal void Win32UpdateButtonState(button_state *new_state, 
+                                     button_state *old_state, 
+                                     DWORD xinput_button_state,
+                                     DWORD button_bit)
+{
+    new_state->down = (xinput_button_state & button_bit);
+    new_state->release = (old_state->down && !new_state->down) ? 1 : 0;
+}
+
+internal void Win32ProcessControllerInput(controller_input *new_input,
+                                          controller_input *old_input)
+{
+    // TODO: Multiple different controller inputs 
+    XINPUT_STATE controller_state; 
+    if (XInputGetState(0, &controller_state) == ERROR_SUCCESS)
+    {
+        new_input->is_connected = 1;
+        XINPUT_GAMEPAD *pad = &controller_state.Gamepad; 
+
+        new_input->stick_average_x = Win32ProcessInputStickValue(
+            pad->sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+        new_input->stick_average_y = Win32ProcessInputStickValue(
+            pad->sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+
+
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_up],
+                               &old_input->buttons[BUTTON_up],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_DPAD_UP);
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_down],
+                               &old_input->buttons[BUTTON_down],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_DPAD_DOWN);
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_left],
+                               &old_input->buttons[BUTTON_left],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_DPAD_LEFT);
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_right],
+                               &old_input->buttons[BUTTON_right],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_DPAD_RIGHT);
+
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_a],
+                               &old_input->buttons[BUTTON_a],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_A);
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_b],
+                               &old_input->buttons[BUTTON_b],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_B);
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_x],
+                               &old_input->buttons[BUTTON_x],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_X);
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_y],
+                               &old_input->buttons[BUTTON_y],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_Y);
+
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_left_shoulder],
+                               &old_input->buttons[BUTTON_left_shoulder],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_LEFT_SHOULDER);
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_right_shoulder],
+                               &old_input->buttons[BUTTON_right_shoulder],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_RIGHT_SHOULDER);
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_start],
+                               &old_input->buttons[BUTTON_start],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_START);
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_back],
+                               &old_input->buttons[BUTTON_back],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_BACK);
+    }
+    else
+    {
+        new_input->is_connected = 0;
+    }
+
+}
+
 LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, 
                                  WPARAM w_param, LPARAM l_param)
 {
@@ -640,19 +739,29 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                 ToggleVSync();
             }
 
-            // platform = &Global_Platform;
             app_code.Init();
+
+            controller_input new_input = {0};
+            controller_input old_input = {0};
+            controller_input zero_input = {0}; 
 
             while (Global_Platform.running)
             {
                 Global_Platform.last_time = Global_Platform.current_time;
                 Global_Platform.current_time += 1.f / target_fps;
 
-                // Clear key release
-                for (int i = 0; i < ArraySize(Global_Platform.key_release); ++i)
+
+                // Input
+                for (int i = 0; i < (int)KEY_MAX; ++i)
                 {
                     Global_Platform.key_release[i] = 0;
                 }
+
+                old_input = new_input;
+                new_input = zero_input;
+                Win32ProcessControllerInput(&new_input, &old_input);
+
+                Global_Platform.controller = new_input;
 
                 MSG message;
                 while(PeekMessage(&message, 0, 0, 0, PM_REMOVE))
@@ -677,7 +786,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                             Sleep(sleep_ms);
                         }
                         seconds_elapsed_for_frame = Win32GetSecondsElapsed(last_counter, 
-                                                                        Win32GetWallClock());
+                                                                           Win32GetWallClock());
                     }
                 }
                 else

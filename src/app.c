@@ -22,6 +22,9 @@ INIT_APP(Init)
 
 UPDATE_APP(Update)
 {
+    state->delta_t = platform->current_time - platform->last_time;
+    DriftLog("Delta time: %d", state->delta_t);
+
     local_persist v2 test_pos = {0};
     local_persist v2 test_vel = {0};
 
@@ -57,7 +60,8 @@ UPDATE_APP(Update)
         }
 
         local_persist b32 space = 0;
-        if (platform->key_release[KEY_space])
+        if (platform->key_release[KEY_space] ||
+            platform->controller.buttons[BUTTON_a].release)
         {
             space = 1;
             test_pos.y -= 100;

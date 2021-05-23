@@ -88,42 +88,19 @@ enum
 #undef Button
     BUTTON_MAX
 };
-                                                                                      Button(back;
+
 typedef struct button_state
 {
-    int half_transitions;
-    b32 ended_down;
+    b32 down;
+    b32 release;
 } button_state;
 
 typedef struct controller_input
 {
     b32 is_connected;
-    b32 is_analog;
     f32 stick_average_x;
     f32 stick_average_y;
-
-    union {
-        button_state buttons[BUTTON_MAX];
-
-        struct
-        {
-            button_state up;
-            button_state down;
-            button_state left;
-            button_state right;
-
-            button_state a_button;
-            button_state b_button;
-            button_state x_button;
-            button_state y_button;
-
-            button_state left_shoulder;
-            button_state right_shoulder;
-
-            button_state start;
-            button_state back;
-        };
-    };
+    button_state buttons[BUTTON_MAX];
 } controller_input;
 
 typedef struct drift_platform
@@ -182,6 +159,7 @@ enum
 #define DriftLogWarning(...) platform->Log(LOG_WARNING, __FILENAME__, __LINE__, __VA_ARGS__)
 #define DriftLogError(...) platform->Log(LOG_ERROR, __FILENAME__, __LINE__, __VA_ARGS__)
 
+// TODO: Window styles are for non windows platform 
 typedef enum drift_window_styles
 {
     DWS_border = 0x00800000L,
