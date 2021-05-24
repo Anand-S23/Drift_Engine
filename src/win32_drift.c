@@ -33,7 +33,7 @@ global x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define XInputSetState XInputSetState_ 
 
 // App Code
-internal FILETIME Win32GetLastWriteTime(char *filename)
+inline FILETIME Win32GetLastWriteTime(char *filename)
 {
     FILETIME last_write_time = {0};
     WIN32_FIND_DATA find_data;
@@ -48,15 +48,13 @@ internal FILETIME Win32GetLastWriteTime(char *filename)
     return last_write_time;
 }
 
-internal win32_app_code Win32LoadAppCode()
+internal win32_app_code Win32LoadAppCode(char *src_dll, char *temp_dll)
 {
     win32_app_code app_code = {0};
 
-    // CopyFile("drift.dll", "drift_temp.dll", 0);
-    // app_code.dll = LoadLibraryA("drift_temp.dll");
-    // app_code.dll_last_write_time = Win32GetLastWriteTime("drift.dll");
-
-    app_code.dll = LoadLibraryA("drift.dll");
+    app_code.dll_last_write_time = Win32GetLastWriteTime(src_dll);
+    CopyFile(src_dll, temp_dll, 0);
+    app_code.dll = LoadLibraryA(temp_dll);
     
     if (!app_code.dll)
     {
@@ -657,7 +655,28 @@ LRESULT CALLBACK Win32WindowProc(HWND window, UINT message,
 int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance, 
                    LPSTR cmd_line, int cmd_show)
 {
-    win32_app_code app_code = Win32LoadAppCode();
+    char exe_path[256];
+    char exe_directory[256];
+    char src_dll_path[256];
+    char temp_dll_path[256];
+    DWORD exe_path_size = GetModuleFileNameA(0, exe_path, sizeof(exe_path));
+
+    CopyMemory(exe_directory, exe_path, exe_path_size);
+    char *one_past_last_slash = exe_directory;
+
+    for (int i = 0; exe_directory[i]; ++i)
+    {
+        if (exe_directory[i] == '\\')
+        {
+            one_past_last_slash = exe_directory + i + 1;
+        }
+    }
+    *one_past_last_slash = 0;
+
+    wsprintf(src_dll_path, "%sdrift.dll", exe_directory);
+    wsprintf(temp_dll_path, "%sdrift_temp.dll", exe_directory);
+
+    win32_app_code app_code = Win32LoadAppCode(src_dll_path, temp_dll_path);
 
     WNDCLASSA window_class = {0};
     {
@@ -745,6 +764,13 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
 
             while (Global_Platform.running)
             {
+                FILETIME new_dll_write_time = Win32GetLastWriteTime(src_dll_path);
+                if (CompareFileTime(&new_dll_write_time, &app_code.dll_last_write_time))
+                {
+                    Win32AppCodeUnload(&app_code);
+                    app_code = Win32LoadAppCode(src_dll_path, temp_dll_path);
+                }
+
                 Global_Platform.last_time = Global_Platform.current_time;
                 Global_Platform.current_time += 1.f / target_fps;
 
