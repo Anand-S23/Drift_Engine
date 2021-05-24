@@ -23,7 +23,7 @@ INIT_APP(Init)
 UPDATE_APP(Update)
 {
     state->delta_t = platform->current_time - platform->last_time;
-    DriftLog("Delta time: %d", state->delta_t);
+    _DriftLog("Delta time: %lf", state->delta_t);
 
     local_persist v2 test_pos = {0};
     local_persist v2 test_vel = {0};

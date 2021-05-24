@@ -136,6 +136,7 @@ typedef struct drift_platform
     i16 wheel_delta;
 
     controller_input controller;
+    controller_input controllers[4];
 
     // Functions
     void (*SwapBuffers)(void); 
@@ -155,6 +156,7 @@ enum
     LOG_ERROR = (1 << 1)
 };
 
+#define _DriftLog(...)
 #define DriftLog(...) platform->Log(LOG, __FILENAME__, __LINE__, __VA_ARGS__)
 #define DriftLogWarning(...) platform->Log(LOG_WARNING, __FILENAME__, __LINE__, __VA_ARGS__)
 #define DriftLogError(...) platform->Log(LOG_ERROR, __FILENAME__, __LINE__, __VA_ARGS__)

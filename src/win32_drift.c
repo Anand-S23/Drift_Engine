@@ -417,11 +417,12 @@ internal void Win32UpdateButtonState(button_state *new_state,
 }
 
 internal void Win32ProcessControllerInput(controller_input *new_input,
-                                          controller_input *old_input)
+                                          controller_input *old_input,
+                                          int controller_index)
 {
     // TODO: Multiple different controller inputs 
     XINPUT_STATE controller_state; 
-    if (XInputGetState(0, &controller_state) == ERROR_SUCCESS)
+    if (XInputGetState(controller_index, &controller_state) == ERROR_SUCCESS)
     {
         new_input->is_connected = 1;
         XINPUT_GAMEPAD *pad = &controller_state.Gamepad; 
@@ -430,7 +431,6 @@ internal void Win32ProcessControllerInput(controller_input *new_input,
             pad->sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
         new_input->stick_average_y = Win32ProcessInputStickValue(
             pad->sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-
 
         Win32UpdateButtonState(&new_input->buttons[BUTTON_up],
                                &old_input->buttons[BUTTON_up],
@@ -487,7 +487,6 @@ internal void Win32ProcessControllerInput(controller_input *new_input,
     {
         new_input->is_connected = 0;
     }
-
 }
 
 LRESULT CALLBACK Win32WindowProc(HWND window, UINT message, 
@@ -741,15 +740,13 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
 
             app_code.Init();
 
-            controller_input new_input = {0};
-            controller_input old_input = {0};
-            controller_input zero_input = {0}; 
+            controller_input new_input[4] = {0};
+            controller_input old_input[4] = {0};
 
             while (Global_Platform.running)
             {
                 Global_Platform.last_time = Global_Platform.current_time;
                 Global_Platform.current_time += 1.f / target_fps;
-
 
                 // Input
                 for (int i = 0; i < (int)KEY_MAX; ++i)
@@ -757,11 +754,16 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                     Global_Platform.key_release[i] = 0;
                 }
 
-                old_input = new_input;
-                new_input = zero_input;
-                Win32ProcessControllerInput(&new_input, &old_input);
+                for (int i = 0; i < 4; ++i)
+                {
+                    old_input[i] = new_input[i];
+                    ZeroMemory(&new_input[i], sizeof(controller_input));
 
-                Global_Platform.controller = new_input;
+                    Win32ProcessControllerInput(&new_input[i], &old_input[i], i);
+                    Global_Platform.controllers[i] = new_input[i];
+                }
+
+                Global_Platform.controller = Global_Platform.controllers[0];
 
                 MSG message;
                 while(PeekMessage(&message, 0, 0, 0, PM_REMOVE))
@@ -806,6 +808,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                 i32 mcpf = (i32)(cycle_elpased / (1000 * 1000));
                 f32 seconds_elapsed_for_work = (f32)counter_elapsed / (f32)Global_Perf_Count_Frequency;
 
+                _W32Log("%d", fps);
                 last_counter = end_counter;
                 last_cycle_count = end_cycle_count;
             }
