@@ -66,6 +66,7 @@ typedef struct render_object
 {
     render_type type;
     float vertices[36];
+    u32 texture;
 } render_object;
 
 typedef struct renderer
@@ -75,8 +76,14 @@ typedef struct renderer
     matrix4f projection_matrix;
     
     shader shader;
-    unsigned int vao;
-    unsigned int vbo;
+
+    u32 vao;
+    u32 vbo;
+    u32 ebo;
+
+    u32 texture_vao;
+    u32 texture_vbo;
+    u32 texture_ebo;
 
     render_object render_list[MAX_RENDER_OBJECTS];
     u32 render_list_count;
