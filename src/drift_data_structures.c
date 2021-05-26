@@ -36,6 +36,12 @@ internal void Push(linked_list *list, void *data)
     ++list->length;
 }
 
+#define PushType(list, type, data)               \
+{                                                \
+    type x = data;                               \
+    Push(list, &x);                              \
+}                                                \
+
 // Appends node to the end of the list
 internal void Append(linked_list *list, void *data)
 {
@@ -59,6 +65,12 @@ internal void Append(linked_list *list, void *data)
     ++list->length;
 }
 
+#define AppendType(list, type, data)             \
+{                                                \
+    type x = data;                               \
+    Append(list, &x);                            \
+}                                                \
+
 // Inserts a node into specified position
 internal b32 Insert(linked_list *list, void *data, int pos)
 {
@@ -81,6 +93,12 @@ internal b32 Insert(linked_list *list, void *data, int pos)
     return 1;
 }
 
+#define InsertType(list, type, data, pos)        \
+{                                                \
+    type x = data;                               \
+    Insert(list, &x, pos);                       \
+}                                                \
+
 // Removes the first element from the list
 internal void *Pop(linked_list *list)
 {
@@ -101,6 +119,8 @@ internal void *Pop(linked_list *list)
     return data;
 }
 
+#define PopType(list, type) ((type *)Pop(list, pos))
+
 // Removes the last element from the list
 internal void *PopLast(linked_list *list)
 {
@@ -117,6 +137,8 @@ internal void *PopLast(linked_list *list)
 
     return data;
 }
+
+#define PopLastType(list, type) ((type *)PopLast(list, pos))
 
 // Removes element form position
 internal void *Remove(linked_list *list, int pos)
@@ -145,6 +167,8 @@ internal void *Remove(linked_list *list, int pos)
 
     return data;
 }
+
+#define RemoveType(list, pos, type) ((type *)Remove(list, pos))
     
 // Returns the data of the top node
 internal void *Top(linked_list *list)
@@ -152,11 +176,15 @@ internal void *Top(linked_list *list)
     return list->head->data;
 }
 
+#define TopType(list, type) ((type *)Top(list))
+
 // Returns the data of the last node
 internal void *Bottom(linked_list *list)
 {
     return list->tail->data;
 }
+
+#define BottomType(list, type) ((type *)Bottom(list))
 
 // Checks if the list is empty
 internal b32 Empty(linked_list *list)

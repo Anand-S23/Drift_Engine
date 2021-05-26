@@ -16,6 +16,14 @@ INIT_APP(Init)
     state = (app_state *)platform->storage;
     InitRenderer(&state->renderer);
 
+    linked_list list = CreateList();
+    PushType(&list, int, 5);
+    PushType(&list, int, 1);
+    AppendType(&list, int, 8);
+    int x = *TopType(&list, int);
+
+    int *z = RemoveType(&list, 5, int);
+
     DriftLog("Initialized");
     platform->initialized = 1;
 }

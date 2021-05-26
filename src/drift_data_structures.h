@@ -11,10 +11,10 @@ typedef struct linked_list
 {
     node *head;
     node *tail;
-    int lenght;
+    int length;
 } linked_list;
 
-typedef stack linked_list;
-typedef queue linked_list;
+typedef linked_list stack;
+typedef linked_list queue;
 
 #endif

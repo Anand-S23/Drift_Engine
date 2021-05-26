@@ -46,6 +46,7 @@ typedef double   f64;
 
 #include "drift_math.h"
 #include "drift_renderer.c"
+#include "drift_data_structures.c"
 
 // TODO: Memset
 
