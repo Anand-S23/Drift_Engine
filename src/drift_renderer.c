@@ -1,4 +1,6 @@
 #include <glad/glad.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 #include "drift_renderer.h"
 
 // TODO: Create shader from file
@@ -73,6 +75,12 @@ internal void Upload4f(shader shader, v4 vec, char *name)
     int location = glGetUniformLocation(shader, name);
     glUniform4f(location, vec.x, vec.y, vec.z, vec.w);
 }
+
+internal void Upload1i(shader shader, u32 val, char *name)
+{
+    int location = glGetUniformLocation(shader, name);
+    glUniform1i(location, val);
+}
     
 internal void ClearScreen(v4 color)
 {
@@ -89,6 +97,9 @@ internal void InitRenderer(renderer *renderer)
 
     renderer->shader = CreateShader(default_vertex_shader,
                                     default_fragment_shader);
+
+    renderer->texture_shader = CreateShader(texture_vertex_shader,
+                                            texture_fragment_shader);
 
     float vertices[] = {
         -0.5f, -0.5f, 1.f, 1.f, 1.f, 1.f,
@@ -115,6 +126,46 @@ internal void InitRenderer(renderer *renderer)
 
     glBindBuffer(GL_ARRAY_BUFFER, 0); 
     glBindVertexArray(0); 
+
+    float texture_vertices[] = {
+        // position     // colors            // texture coords
+         0.5f,  0.5f,   1.f, 0.f, 0.f, 1.f,   1.f, 1.f, // top right
+         0.5f, -0.5f,   0.f, 1.f, 0.f, 1.f,   1.f, 0.f, // bottom right
+        -0.5f, -0.5f,   0.f, 0.f, 1.f, 1.f,   0.f, 0.f, // bottom left
+        -0.5f,  0.5f,   1.f, 1.f, 0.f, 1.f,   0.f, 1.f  // top left 
+    };
+
+    u32 indices[] = {
+        0, 1, 3,
+        1, 2, 3
+    };
+
+    glGenVertexArrays(1, &renderer->texture_vao);
+    glBindVertexArray(renderer->texture_vao);
+
+    glGenBuffers(1, &renderer->texture_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->texture_vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(texture_vertices),
+                 texture_vertices, GL_DYNAMIC_DRAW);
+
+    glGenBuffers(1, &renderer->texture_ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->texture_ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices),
+                 indices, GL_DYNAMIC_DRAW);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+                          (void *)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+                          (void *)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0); 
+    glBindVertexArray(0); 
 }
 
 internal void BeginRenderer(renderer *renderer,
@@ -134,7 +185,6 @@ internal void BeginRenderer(renderer *renderer,
 internal void SubmitRenderer(renderer *renderer)
 {
     UploadMatrix4f(renderer->shader, renderer->projection_matrix, "projection");
-    glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
 
     for (int i = 0; i < renderer->render_list_count; ++i)
     {
@@ -143,6 +193,7 @@ internal void SubmitRenderer(renderer *renderer)
         {
             case RENDER_TYPE_line:
             {
+                glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
                 glBufferSubData(GL_ARRAY_BUFFER, 0,
                                 12 * sizeof(float), obj.vertices);
 
@@ -153,6 +204,7 @@ internal void SubmitRenderer(renderer *renderer)
 
             case RENDER_TYPE_triangle:
             {
+                glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
                 glBufferSubData(GL_ARRAY_BUFFER, 0,
                                 18 * sizeof(float), obj.vertices);
 
@@ -163,12 +215,42 @@ internal void SubmitRenderer(renderer *renderer)
 
             case RENDER_TYPE_rect:
             {
+                glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
                 glBufferSubData(GL_ARRAY_BUFFER, 0,
                                 36 * sizeof(float), obj.vertices);
 
                 UseShader(renderer->shader);
                 glBindVertexArray(renderer->vao);
                 glDrawArrays(GL_TRIANGLES, 0, 6);
+            } break;
+
+            case RENDER_TYPE_texture:
+            {
+                // Get the data
+                glBindBuffer(GL_ARRAY_BUFFER, renderer->texture_vbo);
+                glBufferSubData(GL_ARRAY_BUFFER, 0,
+                                32 * sizeof(float), obj.vertices);
+                glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+                // Specify Texture
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, obj.texture);
+
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+                Upload1i(renderer->texture_shader, 0, "tex");
+
+                // Draw texture
+                UseShader(renderer->texture_shader);
+                glBindVertexArray(renderer->texture_vao);
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+                glBindVertexArray(0);
+
+
             } break;
 
             default: break;
@@ -306,6 +388,88 @@ internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
         obj.vertices[33] = color.g;
         obj.vertices[34] = color.b;
         obj.vertices[35] = color.a;
+    }
+
+    renderer->render_list[renderer->render_list_count] = obj;
+    renderer->render_list_count++;
+}
+
+internal void RenderTexture(renderer *renderer, v2 position, v2 size,
+                            v4 color, char *filename)
+{
+    u32 texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture); 
+
+    // TODO: Add flags for texture GL options
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    // load image, create texture and generate mipmaps
+    int width, height, channels;
+    stbi_set_flip_vertically_on_load(1);
+    u8 *data = stbi_load(filename, &width, &height, &channels, 0);
+
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height,
+                     0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        // DriftLogWarning("stbi_load could not load texture");
+        // TODO: Logging
+    }
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    stbi_image_free(data);
+        
+    render_object obj = {0};
+    {
+        obj.type = RENDER_TYPE_texture;
+        obj.texture = texture;
+
+        v2 tl = position;
+        v2 br = v2(position.x + size.x, position.y + size.y);
+
+        // Top Right
+        obj.vertices[0] = br.x;
+        obj.vertices[1] = tl.y;
+
+        obj.vertices[2] = color.r;
+        obj.vertices[3] = color.g;
+        obj.vertices[4] = color.b;
+        obj.vertices[5] = color.a;
+
+        // Bottom Right
+        obj.vertices[8] = br.x;
+        obj.vertices[9] = br.y;
+
+        obj.vertices[10] = color.r;
+        obj.vertices[11] = color.g;
+        obj.vertices[12] = color.b;
+        obj.vertices[13] = color.a;
+
+        // Bottom Left
+        obj.vertices[16] = tl.x;
+        obj.vertices[17] = br.y;
+
+        obj.vertices[18] = color.r;
+        obj.vertices[19] = color.g;
+        obj.vertices[20] = color.b;
+        obj.vertices[21] = color.a;
+
+        // Top Left
+        obj.vertices[24] = tl.x;
+        obj.vertices[25] = tl.y;
+
+        obj.vertices[26] = color.r;
+        obj.vertices[27] = color.g;
+        obj.vertices[28] = color.b;
+        obj.vertices[29] = color.a;
     }
 
     renderer->render_list[renderer->render_list_count] = obj;
