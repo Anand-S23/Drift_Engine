@@ -24,6 +24,7 @@ INIT_APP(Init)
 
     int *z = RemoveType(&list, 5, int);
 
+    state->tex = CreateTexture("W:\\drift_engine\\misc\\duck.png");
     platform->initialized = 1;
 }
 
@@ -106,8 +107,7 @@ UPDATE_APP(Update)
 
     BeginRenderer(&state->renderer, platform->window_width, platform->window_height);
 
-    RenderTexture(&state->renderer, v2(0, 0), v2(256, 256), v4(0, 0, 0, 1),
-                  "W:\\drift_engine\\misc\\duck.png");
+    RenderTexture(&state->renderer, v2(100, 100), v2(256, 256), &state->tex);
     RenderRect(&state->renderer, test_pos, v2(32.f, 32.f), v4(1.0f, 0.5f, 0.2f, 1.0f));
     RenderRect(&state->renderer, v2(100, 100), v2(100.f, 100.f), v4(0.5, 0, 0, 1));
     RenderTriangle(&state->renderer, v2(150, 200), v2(150, 300),

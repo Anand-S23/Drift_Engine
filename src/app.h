@@ -9,6 +9,8 @@ typedef struct app_state
     // ui ui;
     renderer renderer;
     f32 delta_t;
+
+    texture tex;
 } app_state;
 
 #endif

@@ -44,10 +44,6 @@ typedef double   f64;
 
 #define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 
-#include "drift_math.h"
-#include "drift_renderer.c"
-#include "drift_data_structures.c"
-
 // TODO: Memset
 
 inline u32 SafeTruncateUInt64(u64 value)
@@ -161,6 +157,10 @@ enum
 #define DriftLog(...) platform->Log(LOG, __FILENAME__, __LINE__, __VA_ARGS__)
 #define DriftLogWarning(...) platform->Log(LOG_WARNING, __FILENAME__, __LINE__, __VA_ARGS__)
 #define DriftLogError(...) platform->Log(LOG_ERROR, __FILENAME__, __LINE__, __VA_ARGS__)
+
+#include "drift_math.h"
+#include "drift_renderer.c"
+#include "drift_data_structures.c"
 
 // TODO: Window styles are for non windows platform 
 typedef enum drift_window_styles

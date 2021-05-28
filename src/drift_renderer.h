@@ -25,36 +25,39 @@ global const char *default_fragment_shader = "#version 330 core\n"
 
 global const char *texture_vertex_shader = "#version 330 core\n"
     "layout (location = 0) in vec2 pos;\n"
-    "layout (location = 1) in vec4 color;\n"
-    "layout (location = 2) in vec2 texture_coord;\n"
+    "layout (location = 1) in vec2 texture_coord;\n"
 
     "uniform mat4 projection;\n"
 
-    "out vec4 f_color;\n"
     "out vec2 tex_coord;\n"
 
     "void main()\n"
     "{\n"
         "gl_Position = projection * vec4(pos.x, pos.y, 0.f, 1.f);\n"
-        "f_color = color;\n"
         "tex_coord = vec2(texture_coord.x, texture_coord.y);\n"
    "}\0";
 
 global const char *texture_fragment_shader = "#version 330 core\n"
     "in vec2 tex_coord;\n"
-    "in vec4 f_color;\n"
     "out vec4 frag_color;\n"
 
     "uniform sampler2D tex;\n"
 
     "void main() {\n"
-    // "vec4 tex_color = texture(tex, tex_coord);\n"
         "frag_color = texture(tex, tex_coord);\n"
     "}\n\0";
 
 typedef unsigned int shader;
 
 #define MAX_RENDER_OBJECTS 1000
+
+typedef struct texture
+{
+    u32 id;
+    int width;
+    int height;
+    int channels;
+} texture;
 
 typedef enum render_type
 {
@@ -69,7 +72,7 @@ typedef struct render_object
 {
     render_type type;
     float vertices[36];
-    u32 texture;
+    texture *texture;
 } render_object;
 
 typedef struct renderer
