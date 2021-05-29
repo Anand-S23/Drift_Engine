@@ -71,7 +71,7 @@ typedef enum render_type
 typedef struct render_object
 {
     render_type type;
-    float vertices[36];
+    float vertices[24];
     texture *texture;
 } render_object;
 

@@ -9,7 +9,7 @@
 
 global app_state *state;
 
-INIT_APP(Init)
+INIT_APP
 {
     Assert(sizeof(app_state) <= platform->storage_size);
     state = (app_state *)platform->storage;
@@ -29,7 +29,7 @@ INIT_APP(Init)
     platform->initialized = 1;
 }
 
-UPDATE_APP(Update)
+UPDATE_APP
 {
     state->delta_t = platform->current_time - platform->last_time;
     _DriftLog("Delta time: %lf", state->delta_t);
@@ -120,7 +120,7 @@ UPDATE_APP(Update)
     platform->SwapBuffers();
 }
 
-DRIFT_MAIN(DriftMain)
+DRIFT_MAIN
 {
     drift_application app = {0};
     {

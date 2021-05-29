@@ -17,6 +17,6 @@ IF NOT EXIST build mkdir build
 pushd build
 del *.pdb > NUL 2> NUL
 cl %compile_flags% %engine_file% %external% /link %platform_link_flags% -out:app.exe
-cl %compile_flags% %src_file% %external% -LD /link %common_link_flags%  -EXPORT:Init -EXPORT:Update -EXPORT:DriftMain -PDB:drift_%random%.pdb -out:drift.dll 
+cl %compile_flags% %src_file% %external% -LD /link %common_link_flags%  -PDB:drift_%random%.pdb -out:drift.dll 
 popd
 

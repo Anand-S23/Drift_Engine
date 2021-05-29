@@ -128,19 +128,21 @@ internal void InitRenderer(renderer *renderer)
         // TODO: Logging
     }
 
+    u32 indices[] = {
+        0, 1, 3,
+        1, 2, 3
+    };
+
+    // Primitives
     renderer->shader = CreateShader(default_vertex_shader,
                                     default_fragment_shader);
 
-    renderer->texture_shader = CreateShader(texture_vertex_shader,
-                                            texture_fragment_shader);
-
     float vertices[] = {
-        -0.5f, -0.5f, 1.f, 1.f, 1.f, 1.f,
-         0.5f, -0.5f, 1.f, 1.f, 1.f, 1.f,
-         0.5f,  0.5f, 1.f, 1.f, 1.f, 1.f,
-        -0.5f, -0.5f, 1.f, 1.f, 1.f, 1.f,
-         0.5f,  0.5f, 1.f, 1.f, 1.f, 1.f,
-        -0.5f,  0.5f, 1.f, 1.f, 1.f, 1.f
+        // position    // color
+         0.5f,  0.5f,   1.f, 1.f, 1.f, 1.f, // top right
+         0.5f, -0.5f,   1.f, 1.f, 1.f, 1.f, // bottom right
+        -0.5f, -0.5f,   1.f, 1.f, 1.f, 1.f, // bottom left
+        -0.5f,  0.5f,   1.f, 1.f, 1.f, 1.f  // top left
     };
 
     glGenVertexArrays(1, &renderer->vao);
@@ -151,6 +153,11 @@ internal void InitRenderer(renderer *renderer)
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices),
                  vertices, GL_DYNAMIC_DRAW);
 
+    glGenBuffers(1, &renderer->ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices),
+                 indices, GL_DYNAMIC_DRAW);
+
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
@@ -160,17 +167,16 @@ internal void InitRenderer(renderer *renderer)
     glBindBuffer(GL_ARRAY_BUFFER, 0); 
     glBindVertexArray(0); 
 
+    // Texture
+    renderer->texture_shader = CreateShader(texture_vertex_shader,
+                                            texture_fragment_shader);
+
     float texture_vertices[] = {
         // position     // texture coords
          0.5f,  0.5f,   1.f, 1.f, // top right
          0.5f, -0.5f,   1.f, 0.f, // bottom right
         -0.5f, -0.5f,   0.f, 0.f, // bottom left
         -0.5f,  0.5f,   0.f, 1.f  // top left 
-    };
-
-    u32 indices[] = {
-        0, 1, 3,
-        1, 2, 3
     };
 
     glGenVertexArrays(1, &renderer->texture_vao);
@@ -256,11 +262,11 @@ internal void SubmitRenderer(renderer *renderer)
 
                 glBindBuffer(GL_ARRAY_BUFFER, renderer->vbo);
                 glBufferSubData(GL_ARRAY_BUFFER, 0,
-                                36 * sizeof(float), obj.vertices);
+                                24 * sizeof(float), obj.vertices);
 
                 UseShader(renderer->shader);
                 glBindVertexArray(renderer->vao);
-                glDrawArrays(GL_TRIANGLES, 0, 6);
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
             } break;
 
             case RENDER_TYPE_texture:
@@ -319,8 +325,7 @@ internal void RenderLine(renderer *renderer, v2 p1, v2 p2, v4 color)
         obj.vertices[11] = color.a;
     }
 
-    renderer->render_list[renderer->render_list_count] = obj;
-    renderer->render_list_count++;
+    renderer->render_list[renderer->render_list_count++] = obj;
 }
 
 internal void RenderTriangle(renderer *renderer, v2 p1,
@@ -358,8 +363,7 @@ internal void RenderTriangle(renderer *renderer, v2 p1,
         obj.vertices[17] = color.a;
     }
 
-    renderer->render_list[renderer->render_list_count] = obj;
-    renderer->render_list_count++;
+    renderer->render_list[renderer->render_list_count++] = obj;
 }
 
 internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
@@ -371,9 +375,9 @@ internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
         v2 tl = position;
         v2 br = v2(position.x + size.x, position.y + size.y);
 
-        // Bottom Left
-        obj.vertices[0] = tl.x;
-        obj.vertices[1] = br.y;
+        // Top Right
+        obj.vertices[0] = br.x;
+        obj.vertices[1] = tl.y;
 
         obj.vertices[2] = color.r;
         obj.vertices[3] = color.g;
@@ -388,46 +392,27 @@ internal void RenderRect(renderer *renderer, v2 position, v2 size, v4 color)
         obj.vertices[9] = color.g;
         obj.vertices[10] = color.b;
         obj.vertices[11] = color.a;
-        
-        // Top Right
-        obj.vertices[12] = br.x;
-        obj.vertices[13] = tl.y;
+
+        // Bottom Left
+        obj.vertices[12] = tl.x;
+        obj.vertices[13] = br.y;
 
         obj.vertices[14] = color.r;
         obj.vertices[15] = color.g;
         obj.vertices[16] = color.b;
         obj.vertices[17] = color.a;
 
-        // Bottom Left
+        // Top Left
         obj.vertices[18] = tl.x;
-        obj.vertices[19] = br.y;
+        obj.vertices[19] = tl.y;
 
         obj.vertices[20] = color.r;
         obj.vertices[21] = color.g;
         obj.vertices[22] = color.b;
         obj.vertices[23] = color.a;
-
-        // Top Right
-        obj.vertices[24] = br.x;
-        obj.vertices[25] = tl.y;
-
-        obj.vertices[26] = color.r;
-        obj.vertices[27] = color.g;
-        obj.vertices[28] = color.b;
-        obj.vertices[29] = color.a;
-
-        // Top Left
-        obj.vertices[30] = tl.x;
-        obj.vertices[31] = tl.y;
-
-        obj.vertices[32] = color.r;
-        obj.vertices[33] = color.g;
-        obj.vertices[34] = color.b;
-        obj.vertices[35] = color.a;
     }
 
-    renderer->render_list[renderer->render_list_count] = obj;
-    renderer->render_list_count++;
+    renderer->render_list[renderer->render_list_count++] = obj;
 }
 
 internal void RenderTexture(renderer *renderer, v2 position,
@@ -470,7 +455,6 @@ internal void RenderTexture(renderer *renderer, v2 position,
         obj.vertices[15] = 1.f;
     }
 
-    renderer->render_list[renderer->render_list_count] = obj;
-    renderer->render_list_count++;
+    renderer->render_list[renderer->render_list_count++] = obj;
 }
 

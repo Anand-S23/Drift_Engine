@@ -199,20 +199,27 @@ typedef struct drift_application
     b32 v_sync;
 
     drift_window_styles window_style;
-    b32 window_exact; // TODO: move this to window styles
+    b32 window_exact;
 } drift_application;
 
-#define INIT_APP(name) void name(void)
-typedef INIT_APP(init_app);
-INIT_APP(InitAppStub){}
 
-#define UPDATE_APP(name) void name(void)
-typedef UPDATE_APP(update_app);
-UPDATE_APP(UpdateAppStub){}
+#ifdef _MSC_VER
+#define APP_ENTRY_POINT __declspec(dllexport)
+#else
+#define APP_ENTRY_POINT
+#endif
 
-#define DRIFT_MAIN(name) drift_application name(drift_platform *platform_)
-typedef DRIFT_MAIN(drift_main);
-DRIFT_MAIN(DriftMainStub)
+#define INIT_APP APP_ENTRY_POINT void Init(void)
+typedef void init_app(void);
+void InitAppStub(void){}
+
+#define UPDATE_APP APP_ENTRY_POINT void Update(void)
+typedef void update_app(void);
+void UpdateAppStub(void){}
+
+#define DRIFT_MAIN APP_ENTRY_POINT drift_application DriftMain(drift_platform *platform_)
+typedef drift_application drift_main(drift_platform *platform_);
+drift_application DriftMainStub(drift_platform *platform_)
 {
     drift_application app = {0};
     return app;
