@@ -11,6 +11,8 @@ typedef struct app_state
     f32 delta_t;
 
     texture tex;
+    texture mb;
+    texture back;
 } app_state;
 
 #endif

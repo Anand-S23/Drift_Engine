@@ -5,7 +5,6 @@
 #include <time.h>
 
 #include <drift.h>
-
 #include "app.h"
 
 global app_state *state;
@@ -25,6 +24,8 @@ INIT_APP(Init)
     int *z = RemoveType(&list, 5, int);
 
     state->tex = CreateTexture("W:\\drift_engine\\misc\\duck.png");
+    state->mb = CreateTexture("W:\\drift_engine\\misc\\l.png");
+    state->back = CreateTexture("W:\\drift_engine\\misc\\Background01.png");
     platform->initialized = 1;
 }
 
@@ -42,19 +43,19 @@ UPDATE_APP(Update)
         f32 move_speed = 15.f;
 
         // Movement
-        if (platform->key_down[KEY_w] || platform->key_down[KEY_up])
+        if (platform->keys[KEY_w].down || platform->keys[KEY_up].down)
         {
             test_vel.y += (-move_speed - test_vel.y);
         }
-        if (platform->key_release[KEY_a] || platform->key_down[KEY_left])
+        if (platform->keys[KEY_a].down || platform->keys[KEY_left].down)
         {
             test_vel.x += (-move_speed - test_vel.x);
         }
-        if (platform->key_down[KEY_s] || platform->key_down[KEY_down])
+        if (platform->keys[KEY_s].down || platform->keys[KEY_down].down)
         {
             test_vel.y += (move_speed - test_vel.y);
         }
-        if (platform->key_down[KEY_d] || platform->key_down[KEY_right])
+        if (platform->keys[KEY_d].down || platform->keys[KEY_right].down)
         {
             test_vel.x += (move_speed - test_vel.x);
         }
@@ -68,7 +69,7 @@ UPDATE_APP(Update)
         }
 
         local_persist b32 space = 0;
-        if (platform->key_release[KEY_space] ||
+        if (platform->keys[KEY_space].begin_down ||
             platform->controller.buttons[BUTTON_a].release)
         {
             space = 1;
@@ -86,7 +87,7 @@ UPDATE_APP(Update)
         }
         else if (test_pos.x >= platform->window_width - 32)
         {
-            test_pos.x = platform->window_width - 32;
+            test_pos.x = (float)(platform->window_width - 32);
         }
             
         if (test_pos.y <= 0)
@@ -95,7 +96,7 @@ UPDATE_APP(Update)
         }
         else if (test_pos.y >= platform->window_height - 32)
         {
-            test_pos.y = platform->window_height - 32;
+            test_pos.y = (float)(platform->window_height - 32);
         }
 
         // Reset velocity
@@ -107,7 +108,9 @@ UPDATE_APP(Update)
 
     BeginRenderer(&state->renderer, platform->window_width, platform->window_height);
 
+    // RenderTexture(&state->renderer, v2(0, 0), v2(1280, 720), &state->back);
     RenderTexture(&state->renderer, v2(100, 100), v2(256, 256), &state->tex);
+    RenderTexture(&state->renderer, v2(0, 0), v2(256, 256), &state->mb);
     RenderRect(&state->renderer, test_pos, v2(32.f, 32.f), v4(1.0f, 0.5f, 0.2f, 1.0f));
     RenderRect(&state->renderer, v2(100, 100), v2(100.f, 100.f), v4(0.5, 0, 0, 1));
     RenderTriangle(&state->renderer, v2(150, 200), v2(150, 300),

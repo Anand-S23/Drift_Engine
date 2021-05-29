@@ -90,6 +90,7 @@ typedef struct button_state
 {
     b32 down;
     b32 release;
+    b32 begin_down;
 } button_state;
 
 typedef struct controller_input
@@ -122,8 +123,7 @@ typedef struct drift_platform
     f32 last_time;
 
     // Input
-    b32 key_down[KEY_MAX];
-    b32 key_release[KEY_MAX];
+    button_state keys[KEY_MAX];
 
     f32 mouse_x;
     f32 mouse_y;

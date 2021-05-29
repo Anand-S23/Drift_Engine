@@ -187,7 +187,7 @@ static v4 V4Sub(v4 vec1, v4 vec2)
 
 static float V2Magnitude(v2 vec)
 {
-    return sqrt(vec.x * vec.x + vec.y * vec.y);
+    return (float)sqrt(vec.x * vec.x + vec.y * vec.y);
 }
 
 static v2 V2Normalize(v2 vec)
@@ -198,7 +198,7 @@ static v2 V2Normalize(v2 vec)
 
 static float V3Magnitude(v3 vec)
 {
-    return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+    return (float)sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 }
 
 static v3 V3Normalize(v3 vec)
@@ -209,7 +209,7 @@ static v3 V3Normalize(v3 vec)
 
 static float V4Magnitude(v4 vec)
 {
-    return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z + vec.w * vec.w);
+    return (float)sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z + vec.w * vec.w);
 }
 
 static v4 V4Normalize(v4 vec)

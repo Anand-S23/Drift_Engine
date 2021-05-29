@@ -206,14 +206,14 @@ internal void BeginRenderer(renderer *renderer,
     glViewport(0, 0, window_width, window_height);
 
     renderer->projection_matrix =
-        OrthographicMatrix(0, window_width, window_height, 0, 0.f, 100.f);
+        OrthographicMatrix(0.f, (f32)window_width, (f32)window_height, 0.f, 0.f, 100.f);
 
     renderer->render_list_count = 0;
 }
 
 internal void SubmitRenderer(renderer *renderer)
 {
-    for (int i = 0; i < renderer->render_list_count; ++i)
+    for (u32 i = 0; i < renderer->render_list_count; ++i)
     {
         render_object obj = renderer->render_list[i];
         switch(obj.type)

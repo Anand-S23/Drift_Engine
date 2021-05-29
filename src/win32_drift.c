@@ -61,9 +61,9 @@ internal win32_app_code Win32LoadAppCode(char *src_dll, char *temp_dll)
         return app_code;
     }
     
-    app_code.Init = (void *)GetProcAddress(app_code.dll, "Init");
-    app_code.Update = (void *)GetProcAddress(app_code.dll, "Update");
-    app_code.DriftMain = (void *)GetProcAddress(app_code.dll, "DriftMain");
+    app_code.Init = (init_app *)GetProcAddress(app_code.dll, "Init");
+    app_code.Update = (update_app *)GetProcAddress(app_code.dll, "Update");
+    app_code.DriftMain = (drift_main *)GetProcAddress(app_code.dll, "DriftMain");
     
     if (!app_code.Init || !app_code.Update|| !app_code.DriftMain)
     {
@@ -326,8 +326,8 @@ internal v2 GetWindowDimension(HWND window)
 
     RECT client_rect;
     GetClientRect(window, &client_rect);
-    result.x = client_rect.right - client_rect.left;
-    result.y = client_rect.bottom - client_rect.top;
+    result.x = (float)(client_rect.right - client_rect.left);
+    result.y = (float)(client_rect.bottom - client_rect.top);
 
     return result;
 }
@@ -411,6 +411,7 @@ internal void Win32UpdateButtonState(button_state *new_state,
                                      DWORD button_bit)
 {
     new_state->down = (xinput_button_state & button_bit);
+    new_state->begin_down = (!old_state->down && new_state->down);
     new_state->release = (old_state->down && !new_state->down) ? 1 : 0;
 }
 
@@ -491,9 +492,6 @@ LRESULT CALLBACK Win32WindowProc(HWND window, UINT message,
                                  WPARAM w_param, LPARAM l_param)
 {
     LRESULT result = 0; 
-
-    // local_persist u32 last_was_down = 0;
-    // Global_Platform.key_release[last_was_down] = 0;
 
     switch (message)
     {
@@ -624,9 +622,9 @@ LRESULT CALLBACK Win32WindowProc(HWND window, UINT message,
                     }
                 }
 
-                Global_Platform.key_down[key_index] = is_down;
-                Global_Platform.key_release[key_index] = was_down;
-                // last_was_down = key_index;
+                Global_Platform.keys[key_index].down = is_down;
+                Global_Platform.keys[key_index].begin_down = is_down;
+                Global_Platform.keys[key_index].release = was_down;
             }
 
             b32 alt_key_was_down = ((l_param & (1 << 29)) != 0);
@@ -728,8 +726,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                 Global_Platform.running = 1;
                 Global_Platform.fullscreen = app.fullscreen;
                 Global_Platform.v_sync = app.v_sync;
-                Global_Platform.window_width = window_size.x;
-                Global_Platform.window_height = window_size.y;
+                Global_Platform.window_width = (int)window_size.x;
+                Global_Platform.window_height = (int)window_size.y;
 
                 Global_Platform.storage_size = Megabytes(64); 
                 Global_Platform.transient_storage_size = Megabytes(100);
@@ -777,7 +775,8 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                 // Input
                 for (int i = 0; i < (int)KEY_MAX; ++i)
                 {
-                    Global_Platform.key_release[i] = 0;
+                    Global_Platform.keys[i].release = 0;
+                    Global_Platform.keys[i].begin_down = 0;
                 }
 
                 for (int i = 0; i < 4; ++i)
