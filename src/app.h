@@ -13,6 +13,8 @@ typedef struct app_state
     texture tex;
     texture mb;
     texture back;
+
+    texture_buffer buffer;
 } app_state;
 
 #endif

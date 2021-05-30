@@ -26,6 +26,8 @@ INIT_APP
     state->tex = CreateTexture("W:\\drift_engine\\misc\\duck.png");
     state->mb = CreateTexture("W:\\drift_engine\\misc\\l.png");
     state->back = CreateTexture("W:\\drift_engine\\misc\\Background01.png");
+
+    InitBuffer(&state->buffer, platform->window_width, platform->window_height);
     platform->initialized = 1;
 }
 
@@ -115,6 +117,15 @@ UPDATE_APP
     RenderRect(&state->renderer, v2(100, 100), v2(100.f, 100.f), v4(0.5, 0, 0, 1));
     RenderTriangle(&state->renderer, v2(150, 200), v2(150, 300),
                    v2(300, 300), v4(1, 0, 1, 1));
+
+    ClearBuffer(&state->buffer, v4(0, 0, 0, 1));
+    DrawFilledRect(&state->buffer, v4(300, 300, 100, 100), v4(1, 0.5, 0.2, 1));
+    DrawFilledRect(&state->buffer,
+                   v4(test_pos.x, test_pos.y, 32.f, 32.f), v4(1, 0, 0, 1));
+    texture tb = CreateTextureFromBuffer(&state->buffer);
+    RenderTexture(&state->renderer, v2(0, 0),
+                  v2(state->buffer.width, state->buffer.height), &tb);
+
     SubmitRenderer(&state->renderer);
 
     platform->SwapBuffers();

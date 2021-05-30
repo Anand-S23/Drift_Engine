@@ -51,6 +51,14 @@ typedef unsigned int shader;
 
 #define MAX_RENDER_OBJECTS 1000
 
+typedef struct texture_buffer
+{
+    void *memory;
+    int width;
+    int height;
+    int pitch;
+} texture_buffer;
+
 typedef struct texture
 {
     u32 id;
