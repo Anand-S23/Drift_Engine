@@ -389,6 +389,16 @@ internal void LoadDriftApplicationDefaults(drift_application *app)
     }
 }
 
+internal void Win32VibrateController(u8 controller_id,
+                                     f32 left_motor_speed, f32 right_motor_speed)
+{
+    XINPUT_VIBRATION vibration;
+    ZeroMemory( &vibration, sizeof(XINPUT_VIBRATION) );
+    vibration.wLeftMotorSpeed = (WORD)(left_motor_speed * 65535);
+    vibration.wRightMotorSpeed = (WORD)(right_motor_speed * 65535);
+    XInputSetState(controller_id, &vibration);
+}
+
 internal f32 Win32ProcessInputStickValue(SHORT value, SHORT deadzone)
 {
     f32 result = 0; 
@@ -419,17 +429,25 @@ internal void Win32ProcessControllerInput(controller_input *new_input,
                                           controller_input *old_input,
                                           int controller_index)
 {
-    // TODO: Multiple different controller inputs 
     XINPUT_STATE controller_state; 
     if (XInputGetState(controller_index, &controller_state) == ERROR_SUCCESS)
     {
+        new_input->controller_id = controller_index;
         new_input->is_connected = 1;
         XINPUT_GAMEPAD *pad = &controller_state.Gamepad; 
 
-        new_input->stick_average_x = Win32ProcessInputStickValue(
+        new_input->left_stick_x = Win32ProcessInputStickValue(
             pad->sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-        new_input->stick_average_y = Win32ProcessInputStickValue(
+        new_input->left_stick_y = Win32ProcessInputStickValue(
             pad->sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+
+        new_input->right_stick_x = Win32ProcessInputStickValue(
+            pad->sThumbRX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+        new_input->right_stick_y = Win32ProcessInputStickValue(
+            pad->sThumbRY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+
+        new_input->left_trigger = (f32)pad->bLeftTrigger / 255.f;
+        new_input->right_trigger = (f32)pad->bRightTrigger / 255.f;
 
         Win32UpdateButtonState(&new_input->buttons[BUTTON_up],
                                &old_input->buttons[BUTTON_up],
@@ -448,6 +466,32 @@ internal void Win32ProcessControllerInput(controller_input *new_input,
                                pad->wButtons,
                                XINPUT_GAMEPAD_DPAD_RIGHT);
 
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_start],
+                               &old_input->buttons[BUTTON_start],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_START);
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_back],
+                               &old_input->buttons[BUTTON_back],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_BACK);
+
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_left_thumb_stick],
+                               &old_input->buttons[BUTTON_left_thumb_stick],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_LEFT_THUMB);
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_right_thumb_stick],
+                               &old_input->buttons[BUTTON_right_thumb_stick],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_RIGHT_THUMB);
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_left_shoulder],
+                               &old_input->buttons[BUTTON_left_shoulder],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_LEFT_SHOULDER);
+        Win32UpdateButtonState(&new_input->buttons[BUTTON_right_shoulder],
+                               &old_input->buttons[BUTTON_right_shoulder],
+                               pad->wButtons,
+                               XINPUT_GAMEPAD_RIGHT_SHOULDER);
+
         Win32UpdateButtonState(&new_input->buttons[BUTTON_a],
                                &old_input->buttons[BUTTON_a],
                                pad->wButtons,
@@ -464,23 +508,6 @@ internal void Win32ProcessControllerInput(controller_input *new_input,
                                &old_input->buttons[BUTTON_y],
                                pad->wButtons,
                                XINPUT_GAMEPAD_Y);
-
-        Win32UpdateButtonState(&new_input->buttons[BUTTON_left_shoulder],
-                               &old_input->buttons[BUTTON_left_shoulder],
-                               pad->wButtons,
-                               XINPUT_GAMEPAD_LEFT_SHOULDER);
-        Win32UpdateButtonState(&new_input->buttons[BUTTON_right_shoulder],
-                               &old_input->buttons[BUTTON_right_shoulder],
-                               pad->wButtons,
-                               XINPUT_GAMEPAD_RIGHT_SHOULDER);
-        Win32UpdateButtonState(&new_input->buttons[BUTTON_start],
-                               &old_input->buttons[BUTTON_start],
-                               pad->wButtons,
-                               XINPUT_GAMEPAD_START);
-        Win32UpdateButtonState(&new_input->buttons[BUTTON_back],
-                               &old_input->buttons[BUTTON_back],
-                               pad->wButtons,
-                               XINPUT_GAMEPAD_BACK);
     }
     else
     {
@@ -743,6 +770,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                 Global_Platform.FreeFileMemory = Win32FreeFileMemory;
                 Global_Platform.WriteFile = Win32WriteFile;
                 Global_Platform.Log = Win32LogInternal;
+                Global_Platform.VibrateController = Win32VibrateController;
             }
 
             if (Global_Platform.fullscreen)
@@ -833,7 +861,7 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                 i32 mcpf = (i32)(cycle_elpased / (1000 * 1000));
                 f32 seconds_elapsed_for_work = (f32)counter_elapsed / (f32)Global_Perf_Count_Frequency;
 
-                _W32Log("%d", fps);
+                W32Log("%d", fps);
                 last_counter = end_counter;
                 last_cycle_count = end_cycle_count;
             }

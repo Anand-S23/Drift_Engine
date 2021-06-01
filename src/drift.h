@@ -73,15 +73,18 @@ enum
     Button(left, "Left")
     Button(right, "Right")
 
+    Button(start, "Start")
+    Button(back, "Back")
+
+    Button(left_thumb_stick, "Left Thumb Stick")
+    Button(right_thumb_stick, "Right Thumb Stick")
+    Button(left_shoulder, "Left Shoulder")
+    Button(right_shoulder, "Right Shoulder")
+
     Button(a, "A")
     Button(b, "B")
     Button(x, "X")
     Button(y, "Y")
-
-    Button(left_shoulder, "Left Shoulder")
-    Button(right_shoulder, "Right Shoulder")
-    Button(start, "Start")
-    Button(back, "Back")
 #undef Button
     BUTTON_MAX
 };
@@ -95,9 +98,14 @@ typedef struct button_state
 
 typedef struct controller_input
 {
+    u8 controller_id;
     b32 is_connected;
-    f32 stick_average_x;
-    f32 stick_average_y;
+    f32 left_stick_x;
+    f32 left_stick_y;
+    f32 right_stick_x;
+    f32 right_stick_y;
+    f32 left_trigger;
+    f32 right_trigger;
     button_state buttons[BUTTON_MAX];
 } controller_input;
 
@@ -142,6 +150,7 @@ typedef struct drift_platform
     void (*FreeFileMemory)(void *memory);
     void (*WriteFile)(char *filename, u32 memory_size, void *memory);
     void (*Log)(int type, char *file, int line, char *format, ...);
+    void (*VibrateController)(u8 controller_id, f32 l_motor_speed, f32 r_motor_speed);
 } drift_platform;
 
 global drift_platform *platform;
@@ -160,7 +169,6 @@ enum
 
 #include "drift_math.h"
 #include "drift_renderer.c"
-#include "test_renderer.c"
 #include "drift_data_structures.c"
 
 // TODO: Window styles are for non windows platform 

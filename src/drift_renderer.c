@@ -125,8 +125,12 @@ internal void InitRenderer(renderer *renderer)
 {
     if (!gladLoadGL()) 
     {
-        // TODO: Logging
+        DriftLogError("Glad did not load");
     }
+
+    // Enable opacity
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     u32 indices[] = {
         0, 1, 3,
@@ -236,7 +240,7 @@ internal void SubmitRenderer(renderer *renderer)
 
                 UseShader(renderer->shader);
                 glBindVertexArray(renderer->vao);
-                glDrawArrays(GL_LINE, 0, 3);
+                glDrawArrays(GL_LINES, 0, 2);
             } break;
 
             case RENDER_TYPE_triangle:
@@ -292,12 +296,13 @@ internal void SubmitRenderer(renderer *renderer)
                 glBindVertexArray(renderer->texture_vao);
                 glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-                glBindVertexArray(0);
             } break;
 
             default: break;
         }
     }
+
+    glBindVertexArray(0);
 }
 
 internal void RenderLine(renderer *renderer, v2 p1, v2 p2, v4 color)

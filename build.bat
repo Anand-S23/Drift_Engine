@@ -1,8 +1,8 @@
 @echo off
 
-set stb=..\..\stb
-set g=..\..\glad
-set gl=..\..\..\glext
+set stb=..\external\stb
+set g=..\external\glad
+set gl=..\external\glext
 set src=..\src
 
 set compile_flags= -DDRIFT_SLOW=1 -nologo -FC -MT -Z7 -GR-
