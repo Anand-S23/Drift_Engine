@@ -1,6 +1,14 @@
 #include <glad/glad.h>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
+
+#define STB_TRUETYPE_IMPLEMENTATION 
+#include "stb_truetype.h" 
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 #include "drift_renderer.h"
 
 // TODO: Create shader from file
@@ -65,6 +73,33 @@ internal void DetachShader()
 }
 
 // TODO: Create Texture from data
+internal texture CreateTextureFromData(u8 *data)
+{
+    texture tex;
+    glGenTextures(1, &tex.id);
+    glBindTexture(GL_TEXTURE_2D, tex.id);
+
+    // TODO: Add flags for texture GL options
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    if (data)
+    {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, tex.width, tex.height,
+                     0, GL_RED, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        DriftLogWarning("stbi_load could not load texture");
+    }
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return tex;
+}
+
 internal texture CreateTexture(char *filename)
 {
     texture tex;
@@ -94,6 +129,69 @@ internal texture CreateTexture(char *filename)
 
     stbi_image_free(data);
     glBindTexture(GL_TEXTURE_2D, 0);
+    return tex;
+}
+
+internal font GetFontFromFile(char *font_file, int font_size)
+{
+    read_file_result font_read_result = platform->ReadFile(font_file);
+
+    font font;
+    if (!stbtt_InitFont(&font.info, font_read_result.memory, 0))
+    {
+        DriftLogWarning("stbtt font initialization fail");
+    }
+
+    stbtt_GetFontVMetrics(&font.info, &font.ascent,
+                          &font.descent, &font.line_gap);
+
+    font.scale = stbtt_ScaleForPixelHeight(&font.info, font_size);
+    font.ascent = (int)(font.ascent * font.scale);
+    font.descent = (int)(font.descent * font.scale);
+
+    return font;
+}
+
+internal texture CreateTextureFromText(font *font, char *text, v3 color)
+{
+    u8 bitmap[256 * 256] = {0};
+    u8 texture_data[256 * 256 * 4] = {0};
+    int ch = 0;
+    int x = 0;
+
+    while (text[ch])
+    {
+        int ax, lsb;
+        stbtt_GetCodepointHMetrics(&font->info, text[ch], &ax, &lsb);
+
+        int c_x1, c_y1, c_x2, c_y2;
+        stbtt_GetCodepointBitmapBox(&font->info, text[ch], font->scale,
+                                    font->scale, &c_x1, &c_y1, &c_x2, &c_y2);
+        
+        int y = font->ascent + c_y1;
+        
+        int byte_offset = x + (int)(lsb * font->scale) + (y * 256);
+        stbtt_MakeCodepointBitmap(&font->info, bitmap + byte_offset, c_x2 - c_x1,
+                                  c_y2 - c_y1, 256, font->scale, font->scale, text[ch]);
+
+        x += (int)(ax * font->scale);
+        
+        int kern = stbtt_GetCodepointKernAdvance(&font->info,
+                                                 text[ch], text[ch + 1]);
+        x += (int)(kern * font->scale);
+
+        ++ch;
+    }
+
+    for (int i = 0; i < ArraySize(bitmap); ++i)
+    {
+        texture_data[4 * i + 0] = color.r;
+        texture_data[4 * i + 1] = color.g;
+        texture_data[4 * i + 2] = color.b;
+        texture_data[4 * i + 3] = bitmap[i];
+    }
+
+    texture tex = CreateTextureFromData(texture_data);
     return tex;
 }
 

@@ -51,6 +51,15 @@ typedef unsigned int shader;
 
 #define MAX_RENDER_OBJECTS 1000
 
+typedef struct font
+{
+    int ascent;
+    int descent;
+    int line_gap;
+    f32 scale;
+    stbtt_fontinfo info;
+} font;
+
 typedef struct texture_buffer
 {
     void *memory;

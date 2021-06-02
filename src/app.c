@@ -23,6 +23,8 @@ INIT_APP
 
     int *z = RemoveType(&list, 5, int);
 
+    font f = GetFontFromFile("W:\\drift_engine\\misc\\arial.ttf", 48);
+    state->text = CreateTextureFromText(&f, "Hello World!", v3(0, 1, 1));
     state->tex = CreateTexture("W:\\drift_engine\\misc\\duck.png");
     state->mb = CreateTexture("W:\\drift_engine\\misc\\l.png");
     state->back = CreateTexture("W:\\drift_engine\\misc\\Background01.png");
@@ -118,6 +120,7 @@ UPDATE_APP
                    v2(300, 300), v4(1, 0, 1, 0.5));
 
     RenderLine(&state->renderer, v2(0, 0), v2(300, 300), v4(0, 1, 0, 1));
+    RenderTexture(&state->renderer, v2(400, 100), v2(256, 256), &state->text);
 
     SubmitRenderer(&state->renderer);
 
