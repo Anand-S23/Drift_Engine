@@ -169,6 +169,7 @@ enum
 
 #include "drift_math.h"
 #include "drift_renderer.c"
+#include "drift_ui.c"
 #include "drift_data_structures.c"
 
 // TODO: Window styles are for non windows platform 

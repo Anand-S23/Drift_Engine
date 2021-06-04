@@ -111,19 +111,33 @@ UPDATE_APP
 
     BeginRenderer(&state->renderer, platform->window_width, platform->window_height);
 
-    // RenderTexture(&state->renderer, v2(0, 0), v2(1280, 720), &state->back);
+#if 0
+    RenderTexture(&state->renderer, v2(0, 0), v2(1280, 720), &state->back);
     RenderTexture(&state->renderer, v2(100, 100), v2(256, 256), &state->tex);
     RenderTexture(&state->renderer, v2(0, 0), v2(256, 256), &state->mb);
-    RenderRect(&state->renderer, test_pos, v2(32.f, 32.f), v4(1.0f, 0.5f, 0.2f, 1.0f));
     RenderRect(&state->renderer, v2(100, 100), v2(100.f, 100.f), v4(0.5, 0, 0, 1));
-    RenderTriangle(&state->renderer, v2(150, 200), v2(150, 300),
-                   v2(300, 300), v4(1, 0, 1, 0.5));
-
+    RenderTriangle(&state->renderer, v2(150, 200), v2(150, 300), v2(300, 300), v4(1, 0, 1, 0.5));
     RenderLine(&state->renderer, v2(0, 0), v2(300, 300), v4(0, 1, 0, 1));
     RenderTexture(&state->renderer, v2(400, 100), v2(256, 256), &state->text);
+#endif
+
+    RenderRect(&state->renderer, test_pos, v2(32.f, 32.f), v4(1.0f, 0.5f, 0.2f, 1.0f));
+
+    local_persist ui app_ui = {0};
+    UIBeginFrame(&app_ui, &state->renderer);
+    {
+        local_persist f32 value = 0.f;
+        if (UIButton(&app_ui, UIIDGen(), "Test", v2(300, 0), v2(100, 50)))
+        {
+            RenderRect(&state->renderer, v2(100, 100),
+                       v2(100.f, 100.f), v4(0.5, 0, 0, 1));
+        }
+
+        value = UISlider(&app_ui, UIIDGen(), v2(300, 50), v2(100, 50), value);
+    }
+    UIEndFrame(&app_ui);
 
     SubmitRenderer(&state->renderer);
-
     platform->SwapBuffers();
 }
 
