@@ -55,6 +55,8 @@ typedef struct font
 {
 	stbtt_fontinfo *info;
 	stbtt_packedchar *characters;
+
+    stbtt_bakedchar char_data[96];
     u32 texture_atlas;
 	int texture_size;
 	f32 size;

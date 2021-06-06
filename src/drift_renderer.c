@@ -9,6 +9,9 @@
 #define STB_TRUETYPE_IMPLEMENTATION 
 #include "stb_truetype.h" 
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 #include "drift_renderer.h"
 
 // Utilites
@@ -188,9 +191,9 @@ internal b32 InitFont(font *font, char *file, int font_size)
         return 0;
     }
 
-    // Get best texture size
+#if 0
     u8 *bitmap;
-    font->texture_size = 32;
+    font->texture_size = 512;
     for(;;)
     {
         bitmap = malloc(font->texture_size * font->texture_size);
@@ -200,7 +203,7 @@ internal b32 InitFont(font *font, char *file, int font_size)
                         font->texture_size, 0, 1, 0);
 		stbtt_PackSetOversampling(&pack_context, 1, 1);
 
-        if (!stbtt_PackFontRange(&pack_context, font_read_result.memory,
+        if (!stbtt_PackFontRange(&pack_context, (u8 *)font_read_result.memory,
                                  0, font->size, 32, 95, font->characters))
         {
             // Texture size not big enough
@@ -215,16 +218,13 @@ internal b32 InitFont(font *font, char *file, int font_size)
 		}
     }
 
-    u8 *pixel_data = (u8 *)malloc(font->texture_size * font->texture_size * 4);
-    for (int i = 0; i < ArraySize(pixel_data); ++i)
+    int bitmap_size = font->texture_size * font->texture_size;
+    u8 *pixel_data = (u8 *)malloc(bitmap_size * 4);
+    for (int i = 0; i < bitmap_size; ++i)
     {
-        u8 r = 1;
-        u8 g = 1;
-        u8 b = 1;
-
-        pixel_data[i] = r;
-        pixel_data[i + 1] = g;
-        pixel_data[i + 2] = b;
+        pixel_data[i] = 1;
+        pixel_data[i + 1] = 1;
+        pixel_data[i + 2] = 1;
         pixel_data[1 + 3] = bitmap[i];
     }
 
@@ -233,6 +233,41 @@ internal b32 InitFont(font *font, char *file, int font_size)
     font->texture_atlas = tex.id;
     free(bitmap);
     free(pixel_data);
+#endif
+
+    // Get best texture size
+    u8 *bitmap;
+    font->texture_size = 512;
+    for(;;)
+    {
+        bitmap = malloc(font->texture_size * font->texture_size);
+
+        if (!stbtt_BakeFontBitmap((u8 *)font_read_result.memory, 0, font->size, bitmap,
+                                  font->texture_size, font->texture_size, 32, 95, font->char_data))
+        {
+            // Texture size not big enough
+			free(bitmap);
+			font->texture_size *= 2;
+		}
+        else
+        {
+			break;
+		}
+    }
+
+    glGenTextures(1, &font->texture_atlas);
+    glBindTexture(GL_TEXTURE_2D, font->texture_atlas);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, font->texture_size, font->texture_size,
+                 0, GL_ALPHA, GL_UNSIGNED_BYTE, bitmap);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     stbtt_GetFontVMetrics(font->info, &font->ascent,
                           &font->descent, &font->line_gap);
