@@ -23,8 +23,18 @@ INIT_APP
 
     int *z = RemoveType(&list, 5, int);
 
-    font f = GetFontFromFile("W:\\drift_engine\\misc\\arial.ttf", 48);
-    state->text = CreateTextureFromText(&f, "Hello World!", v3(0, 1, 1));
+    if (!InitFont(&state->app_font, "W:\\drift_engine\\misc\\arial.ttf", 48))
+    {
+        DriftLogWarning("Error with initializg font");
+    }
+
+    texture text_tex = {0};
+    text_tex.id = state->app_font.texture_atlas;
+    text_tex.width = state->app_font.texture_size;
+    text_tex.height = state->app_font.texture_size;
+    text_tex.channels = 4;
+    
+    state->text = text_tex;
     state->tex = CreateTexture("W:\\drift_engine\\misc\\duck.png");
     state->mb = CreateTexture("W:\\drift_engine\\misc\\l.png");
     state->back = CreateTexture("W:\\drift_engine\\misc\\Background01.png");
@@ -118,22 +128,23 @@ UPDATE_APP
     RenderRect(&state->renderer, v2(100, 100), v2(100.f, 100.f), v4(0.5, 0, 0, 1));
     RenderTriangle(&state->renderer, v2(150, 200), v2(150, 300), v2(300, 300), v4(1, 0, 1, 0.5));
     RenderLine(&state->renderer, v2(0, 0), v2(300, 300), v4(0, 1, 0, 1));
-    RenderTexture(&state->renderer, v2(400, 100), v2(256, 256), &state->text);
 #endif
 
+    RenderTexture(&state->renderer, v2(400, 100),
+                  v2(state->text.width, state->text.height), &state->text);
     RenderRect(&state->renderer, test_pos, v2(32.f, 32.f), v4(1.0f, 0.5f, 0.2f, 1.0f));
 
     local_persist ui app_ui = {0};
     UIBeginFrame(&app_ui, &state->renderer);
     {
-        local_persist f32 value = 0.f;
         if (UIButton(&app_ui, UIIDGen(), "Test", v2(300, 0), v2(100, 50)))
         {
             RenderRect(&state->renderer, v2(100, 100),
                        v2(100.f, 100.f), v4(0.5, 0, 0, 1));
         }
 
-        value = UISlider(&app_ui, UIIDGen(), v2(300, 50), v2(100, 50), value);
+        local_persist f32 value = 0.f;
+        value = UISlider(&app_ui, UIIDGen(), v2(300, 75), v2(100, 50), value);
     }
     UIEndFrame(&app_ui);
 

@@ -18,6 +18,12 @@ internal b32 UIIDEqual(ui_id id1, ui_id id2)
             id1.secondary == id2.secondary);
 }
 
+internal v4 UIGetPannelAutoLayoutRect(ui *ui, v4 something)
+{
+    v4 rect = {0};
+}
+
+
 internal void UIBeginFrame(ui *ui, renderer *renderer)
 {
     ui->mouse_x = platform->mouse_x;
@@ -58,12 +64,12 @@ internal void UIEndFrame(ui *ui)
             case UI_WIDGET_slider:
             {
                 RenderRect(ui->renderer, widget->position, widget->size,
-                           v4(0.6f, 0.6f, 0.6f, 0.6f));
+                           v4(0.6f, 0.6f, 0.6f, 1.f));
 
                 RenderRect(ui->renderer, widget->position, 
                            v2(widget->size.width * widget->slider.value,
                               widget->size.height),
-                           v4(0.8f, 0.8f, 0.8f, 0.8f));
+                           v4(0.8f, 0.8f, 0.8f, 1.f));
             } break;
             
             default:
@@ -72,6 +78,10 @@ internal void UIEndFrame(ui *ui)
             } break;
         }
     }
+}
+
+internal void UIMenu(ui *ui, v2 start_pos, v2 element_size)
+{
 }
 
 internal b32 UIButtonInternal(ui *ui, ui_id id, char *text,
@@ -84,7 +94,7 @@ internal b32 UIButtonInternal(ui *ui, ui_id id, char *text,
     b32 cursor_is_over = (ui->mouse_x >= position.x &&
                           ui->mouse_x <= position.x + size.width &&
                           ui->mouse_y >= position.y &&
-                          ui->mouse_y <= position.y + position.height);
+                          ui->mouse_y <= position.y + size.height);
     
     if (!UIIDEqual(ui->hot, id) && cursor_is_over)
     {

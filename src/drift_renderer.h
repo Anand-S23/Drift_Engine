@@ -53,11 +53,16 @@ typedef unsigned int shader;
 
 typedef struct font
 {
-    int ascent;
-    int descent;
+	stbtt_fontinfo *info;
+	stbtt_packedchar *characters;
+    u32 texture_atlas;
+	int texture_size;
+	f32 size;
+	f32 scale;
+	int ascent;
+	int descent;
     int line_gap;
-    f32 scale;
-    stbtt_fontinfo info;
+	int baseline;
 } font;
 
 typedef struct texture_buffer

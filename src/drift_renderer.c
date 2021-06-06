@@ -3,13 +3,15 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define STB_RECT_PACK_IMPLEMENTATION
+#include "stb_rect_pack.h"
+
 #define STB_TRUETYPE_IMPLEMENTATION 
 #include "stb_truetype.h" 
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-
 #include "drift_renderer.h"
+
+// Utilites
 
 // TODO: Create shader from file
 internal shader CreateShader(const char *vertex_shader_source,
@@ -72,10 +74,32 @@ internal void DetachShader()
     glUseProgram(0);
 }
 
-// TODO: Create Texture from data
-internal texture CreateTextureFromData(u8 *data)
+internal void UploadMatrix4f(shader shader, matrix4f matrix, char *name)
+{
+    int location = glGetUniformLocation(shader, name); 
+    glUniformMatrix4fv(location, 1, GL_FALSE, &matrix.elements[0][0]);
+}
+
+internal void Upload4f(shader shader, v4 vec, char *name)
+{
+    int location = glGetUniformLocation(shader, name);
+    glUniform4f(location, vec.x, vec.y, vec.z, vec.w);
+}
+
+internal void Upload1i(shader shader, u32 val, char *name)
+{
+    int location = glGetUniformLocation(shader, name);
+    glUniform1i(location, val);
+}
+
+// Textures
+    
+internal texture CreateTextureFromData(u8 *data, int texture_width,
+                                       int texture_height)
 {
     texture tex;
+    tex.width = texture_width;
+    tex.height = texture_height;
     glGenTextures(1, &tex.id);
     glBindTexture(GL_TEXTURE_2D, tex.id);
 
@@ -87,8 +111,9 @@ internal texture CreateTextureFromData(u8 *data)
 
     if (data)
     {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, tex.width, tex.height,
-                     0, GL_RED, GL_UNSIGNED_BYTE, data);
+        // TODO: Handle Access Violation
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex.width, tex.height, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
     }
     else
@@ -132,87 +157,111 @@ internal texture CreateTexture(char *filename)
     return tex;
 }
 
-internal font GetFontFromFile(char *font_file, int font_size)
-{
-    read_file_result font_read_result = platform->ReadFile(font_file);
+// Font
 
-    font font;
-    if (!stbtt_InitFont(&font.info, font_read_result.memory, 0))
+internal void CloseFont(font *font)
+{
+    if (font->info)
     {
-        DriftLogWarning("stbtt font initialization fail");
+        free(font->info);
     }
 
-    stbtt_GetFontVMetrics(&font.info, &font.ascent,
-                          &font.descent, &font.line_gap);
-
-    font.scale = stbtt_ScaleForPixelHeight(&font.info, font_size);
-    font.ascent = (int)(font.ascent * font.scale);
-    font.descent = (int)(font.descent * font.scale);
-
-    return font;
-}
-
-internal texture CreateTextureFromText(font *font, char *text, v3 color)
-{
-    u8 bitmap[256 * 256] = {0};
-    u8 texture_data[256 * 256 * 4] = {0};
-    int ch = 0;
-    int x = 0;
-
-    while (text[ch])
+    if (font->characters)
     {
-        int ax, lsb;
-        stbtt_GetCodepointHMetrics(&font->info, text[ch], &ax, &lsb);
-
-        int c_x1, c_y1, c_x2, c_y2;
-        stbtt_GetCodepointBitmapBox(&font->info, text[ch], font->scale,
-                                    font->scale, &c_x1, &c_y1, &c_x2, &c_y2);
-        
-        int y = font->ascent + c_y1;
-        
-        int byte_offset = x + (int)(lsb * font->scale) + (y * 256);
-        stbtt_MakeCodepointBitmap(&font->info, bitmap + byte_offset, c_x2 - c_x1,
-                                  c_y2 - c_y1, 256, font->scale, font->scale, text[ch]);
-
-        x += (int)(ax * font->scale);
-        
-        int kern = stbtt_GetCodepointKernAdvance(&font->info,
-                                                 text[ch], text[ch + 1]);
-        x += (int)(kern * font->scale);
-
-        ++ch;
+        free(font->characters);
     }
 
-    for (int i = 0; i < ArraySize(bitmap); ++i)
+    font->texture_atlas = 0;
+}
+
+internal b32 InitFont(font *font, char *file, int font_size)
+{
+    read_file_result font_read_result = platform->ReadFile(file);
+	font->info = malloc(sizeof(stbtt_fontinfo));
+	font->characters = malloc(sizeof(stbtt_packedchar) * 96);
+    font->size = font_size;
+
+    if (!stbtt_InitFont(font->info, (u8 *)font_read_result.memory, 0))
     {
-        texture_data[4 * i + 0] = color.r;
-        texture_data[4 * i + 1] = color.g;
-        texture_data[4 * i + 2] = color.b;
-        texture_data[4 * i + 3] = bitmap[i];
+        CloseFont(font);
+        font = NULL;
+        return 0;
     }
 
-    texture tex = CreateTextureFromData(texture_data);
-    return tex;
+    // Get best texture size
+    u8 *bitmap;
+    font->texture_size = 32;
+    for(;;)
+    {
+        bitmap = malloc(font->texture_size * font->texture_size);
+
+        stbtt_pack_context pack_context;
+		stbtt_PackBegin(&pack_context, bitmap, font->texture_size,
+                        font->texture_size, 0, 1, 0);
+		stbtt_PackSetOversampling(&pack_context, 1, 1);
+
+        if (!stbtt_PackFontRange(&pack_context, font_read_result.memory,
+                                 0, font->size, 32, 95, font->characters))
+        {
+            // Texture size not big enough
+			free(bitmap);
+			stbtt_PackEnd(&pack_context);
+			font->texture_size *= 2;
+		}
+        else
+        {
+			stbtt_PackEnd(&pack_context);
+			break;
+		}
+    }
+
+    u8 *pixel_data = (u8 *)malloc(font->texture_size * font->texture_size * 4);
+    for (int i = 0; i < ArraySize(pixel_data); ++i)
+    {
+        u8 r = 1;
+        u8 g = 1;
+        u8 b = 1;
+
+        pixel_data[i] = r;
+        pixel_data[i + 1] = g;
+        pixel_data[i + 2] = b;
+        pixel_data[1 + 3] = bitmap[i];
+    }
+
+    texture tex = CreateTextureFromData(pixel_data, font->texture_size,
+                                        font->texture_size);
+    font->texture_atlas = tex.id;
+    free(bitmap);
+    free(pixel_data);
+
+    stbtt_GetFontVMetrics(font->info, &font->ascent,
+                          &font->descent, &font->line_gap);
+
+    font->scale = stbtt_ScaleForPixelHeight(font->info, font->size);
+    font->baseline = (int)(font->ascent * font->scale);
+
+    platform->FreeFileMemory(font_read_result.memory);
+    return 1;
 }
 
-internal void UploadMatrix4f(shader shader, matrix4f matrix, char *name)
+internal f32 GetTextWidth(font *font, char *text)
 {
-    int location = glGetUniformLocation(shader, name); 
-    glUniformMatrix4fv(location, 1, GL_FALSE, &matrix.elements[0][0]);
+    f32 width = 0;
+
+    for (int i = 0; text[i]; ++i)
+    {
+        if (text[i] >= 32 && text[i] < 128)
+        {
+            stbtt_packedchar *info = &font->characters[text[i] - 32];
+			width += info->xadvance;
+        }
+    }
+
+    return width;
 }
 
-internal void Upload4f(shader shader, v4 vec, char *name)
-{
-    int location = glGetUniformLocation(shader, name);
-    glUniform4f(location, vec.x, vec.y, vec.z, vec.w);
-}
+// Core
 
-internal void Upload1i(shader shader, u32 val, char *name)
-{
-    int location = glGetUniformLocation(shader, name);
-    glUniform1i(location, val);
-}
-    
 internal void ClearScreen(v4 color)
 {
     glClearColor(color.r, color.g, color.b, color.a); 

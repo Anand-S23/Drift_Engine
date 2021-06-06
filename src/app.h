@@ -10,6 +10,7 @@ typedef struct app_state
     renderer renderer;
     f32 delta_t;
 
+    font app_font;
     texture text;
     texture tex;
     texture mb;
