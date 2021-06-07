@@ -97,36 +97,6 @@ internal void Upload1i(shader shader, u32 val, char *name)
 
 // Textures
     
-internal texture CreateTextureFromData(u8 *data, int texture_width,
-                                       int texture_height)
-{
-    texture tex;
-    tex.width = texture_width;
-    tex.height = texture_height;
-    glGenTextures(1, &tex.id);
-    glBindTexture(GL_TEXTURE_2D, tex.id);
-
-    // TODO: Add flags for texture GL options
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    if (data)
-    {
-        // TODO: Handle Access Violation
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex.width, tex.height, 0,
-                     GL_RGBA, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        DriftLogWarning("stbi_load could not load texture");
-    }
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-    return tex;
-}
 
 internal texture CreateTexture(char *filename)
 {
@@ -160,7 +130,55 @@ internal texture CreateTexture(char *filename)
     return tex;
 }
 
+internal texture CreateTextureFromData(u8 *data, int texture_width,
+                                       int texture_height)
+{
+    texture tex;
+    tex.width = texture_width;
+    tex.height = texture_height;
+    glGenTextures(1, &tex.id);
+    glBindTexture(GL_TEXTURE_2D, tex.id);
+
+    // TODO: Add flags for texture GL options
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    if (data)
+    {
+        // TODO: Handle Access Violation
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, tex.width, tex.height, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else
+    {
+        DriftLogWarning("stbi_load could not load texture");
+    }
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return tex;
+}
+
 // Font
+
+internal void GenTexFromFontBM(font *font, u8 *bitmap)
+{
+    glGenTextures(1, &font->texture_atlas);
+    glBindTexture(GL_TEXTURE_2D, font->texture_atlas);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, font->texture_size, font->texture_size,
+                 0, GL_ALPHA, GL_UNSIGNED_BYTE, bitmap);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
 
 internal void CloseFont(font *font)
 {
@@ -177,6 +195,83 @@ internal void CloseFont(font *font)
     font->texture_atlas = 0;
 }
 
+internal void InitFontPacked(font *font, u8 *font_memory)
+{
+    u8 *bitmap;
+    font->texture_size = 512;
+    int tex_size;
+    for(;;)
+    {
+        tex_size = font->texture_size;
+        bitmap = malloc(tex_size * tex_size);
+
+        stbtt_pack_context pack_context;
+		stbtt_PackBegin(&pack_context, bitmap, tex_size, tex_size, 0, 1, 0);
+		stbtt_PackSetOversampling(&pack_context, 1, 1);
+
+        if (!stbtt_PackFontRange(&pack_context, font_memory, 0,
+                                 font->size, 32, 95, font->characters))
+        {
+            // Texture size not big enough
+			free(bitmap);
+			stbtt_PackEnd(&pack_context);
+			font->texture_size *= 2;
+		}
+        else
+        {
+			stbtt_PackEnd(&pack_context);
+			break;
+		}
+    }
+
+    u8 *reverse_bitmap = (u8 *)malloc(tex_size * tex_size);
+    for (int i = tex_size - 1; i >= 0; --i)
+    {
+        memcpy(&reverse_bitmap[(tex_size - 1 - i) * tex_size],
+               &bitmap[i * tex_size], tex_size);
+    }
+
+    GenTexFromFontBM(font, reverse_bitmap);
+    free(bitmap);
+    free(reverse_bitmap);
+}
+
+internal void InitFontBaked(font *font, u8 *font_memory)
+{
+    // Get best texture size
+    u8 *bitmap;
+    font->texture_size = 512;
+    int tex_size;
+    for(;;)
+    {
+        tex_size = font->texture_size;
+        bitmap = malloc(tex_size * tex_size);
+
+        if (!stbtt_BakeFontBitmap((u8 *)font_memory, 0, font->size, bitmap,
+                                  tex_size, tex_size, 32, 95, font->char_data))
+        {
+            // Texture size not big enough
+			free(bitmap);
+			font->texture_size *= 2;
+		}
+        else
+        {
+			break;
+		}
+    }
+
+    u8 *reverse_bitmap = (u8 *)malloc(tex_size * tex_size);
+    for (int i = tex_size - 1; i >= 0; --i)
+    {
+        memcpy(&reverse_bitmap[(tex_size - 1 - i) * tex_size],
+               &bitmap[i * tex_size], tex_size);
+    }
+
+    GenTexFromFontBM(font, reverse_bitmap);
+    free(bitmap);
+    free(reverse_bitmap);
+}
+
 internal b32 InitFont(font *font, char *file, int font_size)
 {
     read_file_result font_read_result = platform->ReadFile(file);
@@ -191,83 +286,7 @@ internal b32 InitFont(font *font, char *file, int font_size)
         return 0;
     }
 
-#if 0
-    u8 *bitmap;
-    font->texture_size = 512;
-    for(;;)
-    {
-        bitmap = malloc(font->texture_size * font->texture_size);
-
-        stbtt_pack_context pack_context;
-		stbtt_PackBegin(&pack_context, bitmap, font->texture_size,
-                        font->texture_size, 0, 1, 0);
-		stbtt_PackSetOversampling(&pack_context, 1, 1);
-
-        if (!stbtt_PackFontRange(&pack_context, (u8 *)font_read_result.memory,
-                                 0, font->size, 32, 95, font->characters))
-        {
-            // Texture size not big enough
-			free(bitmap);
-			stbtt_PackEnd(&pack_context);
-			font->texture_size *= 2;
-		}
-        else
-        {
-			stbtt_PackEnd(&pack_context);
-			break;
-		}
-    }
-
-    int bitmap_size = font->texture_size * font->texture_size;
-    u8 *pixel_data = (u8 *)malloc(bitmap_size * 4);
-    for (int i = 0; i < bitmap_size; ++i)
-    {
-        pixel_data[i] = 1;
-        pixel_data[i + 1] = 1;
-        pixel_data[i + 2] = 1;
-        pixel_data[1 + 3] = bitmap[i];
-    }
-
-    texture tex = CreateTextureFromData(pixel_data, font->texture_size,
-                                        font->texture_size);
-    font->texture_atlas = tex.id;
-    free(bitmap);
-    free(pixel_data);
-#endif
-
-    // Get best texture size
-    u8 *bitmap;
-    font->texture_size = 512;
-    for(;;)
-    {
-        bitmap = malloc(font->texture_size * font->texture_size);
-
-        if (!stbtt_BakeFontBitmap((u8 *)font_read_result.memory, 0, font->size, bitmap,
-                                  font->texture_size, font->texture_size, 32, 95, font->char_data))
-        {
-            // Texture size not big enough
-			free(bitmap);
-			font->texture_size *= 2;
-		}
-        else
-        {
-			break;
-		}
-    }
-
-    glGenTextures(1, &font->texture_atlas);
-    glBindTexture(GL_TEXTURE_2D, font->texture_atlas);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, font->texture_size, font->texture_size,
-                 0, GL_ALPHA, GL_UNSIGNED_BYTE, bitmap);
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
+    InitFontPacked(font, (u8 *)font_read_result.memory);
 
     stbtt_GetFontVMetrics(font->info, &font->ascent,
                           &font->descent, &font->line_gap);
@@ -288,7 +307,7 @@ internal f32 GetTextWidth(font *font, char *text)
         if (text[i] >= 32 && text[i] < 128)
         {
             stbtt_packedchar *info = &font->characters[text[i] - 32];
-			width += info->xadvance;
+            width += info->xadvance;
         }
     }
 

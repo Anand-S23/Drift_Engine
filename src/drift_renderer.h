@@ -51,12 +51,18 @@ typedef unsigned int shader;
 
 #define MAX_RENDER_OBJECTS 1000
 
+enum
+{
+    FONT_advanced,
+    FONT_simple
+};
+
 typedef struct font
 {
 	stbtt_fontinfo *info;
 	stbtt_packedchar *characters;
-
     stbtt_bakedchar char_data[96];
+    int type;
     u32 texture_atlas;
 	int texture_size;
 	f32 size;
