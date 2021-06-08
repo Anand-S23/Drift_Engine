@@ -47,15 +47,35 @@ global const char *texture_fragment_shader = "#version 330 core\n"
         "frag_color = texture(tex, tex_coord);\n"
     "}\n\0";
 
+global const char *text_vertex_shader = "#version 330 core\n"
+    "layout (location = 0) in vec2 pos;\n"
+    "layout (location = 1) in vec2 texture_coord;\n"
+
+    "uniform mat4 projection;\n"
+
+    "out vec2 tex_coord;\n"
+
+    "void main()\n"
+    "{\n"
+        "gl_Position = projection * vec4(pos.x, pos.y, 0.f, 1.f);\n"
+        "tex_coord = vec2(texture_coord.x, texture_coord.y);\n"
+   "}\0";
+
+global const char *text_fragment_shader = "#version 330 core\n"
+    "in vec2 tex_coord;\n"
+    "out vec4 frag_color;\n"
+
+    "uniform sampler2D text;\n"
+    "uniform vec4 color;\n"
+
+    "void main() {\n"
+        "vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, tex_coord).a);\n"
+        "frag_color = color * sampled;\n"
+    "}\n\0";
+
 typedef unsigned int shader;
 
 #define MAX_RENDER_OBJECTS 1000
-
-enum
-{
-    FONT_advanced,
-    FONT_simple
-};
 
 typedef struct font
 {
@@ -94,8 +114,18 @@ typedef enum render_type
     RENDER_TYPE_line, 
     RENDER_TYPE_triangle,
     RENDER_TYPE_rect,
-    RENDER_TYPE_texture
+    RENDER_TYPE_texture,
+    RENDER_TYPE_text,
+    RENDER_TYPE_character
 } render_type;
+
+typedef struct text_info
+{
+    font *font;
+    char *data;
+    v4 color;
+    v2 position;
+} text_info;
 
 // TODO: More generic
 typedef struct render_object
@@ -103,6 +133,7 @@ typedef struct render_object
     render_type type;
     float vertices[24];
     texture *texture;
+    text_info text;
 } render_object;
 
 typedef struct renderer
@@ -113,6 +144,7 @@ typedef struct renderer
     
     shader shader;
     shader texture_shader;
+    shader text_shader;
 
     u32 vao;
     u32 vbo;

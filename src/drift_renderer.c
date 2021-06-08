@@ -372,9 +372,12 @@ internal void InitRenderer(renderer *renderer)
     glBindBuffer(GL_ARRAY_BUFFER, 0); 
     glBindVertexArray(0); 
 
-    // Texture
+    // Texture and Text
     renderer->texture_shader = CreateShader(texture_vertex_shader,
                                             texture_fragment_shader);
+
+    renderer->text_shader = CreateShader(text_vertex_shader,
+                                         text_fragment_shader);
 
     float texture_vertices[] = {
         // position     // texture coords
@@ -496,7 +499,104 @@ internal void SubmitRenderer(renderer *renderer)
                 UseShader(renderer->texture_shader);
                 glBindVertexArray(renderer->texture_vao);
                 glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            } break;
 
+            case RENDER_TYPE_character:
+            {
+                UploadMatrix4f(renderer->text_shader,
+                               renderer->projection_matrix,
+                               "projection");
+
+                Upload4f(renderer->text_shader, obj.text.color, "color");
+
+                // Get the data
+                glBindBuffer(GL_ARRAY_BUFFER, renderer->texture_vbo);
+                glBufferSubData(GL_ARRAY_BUFFER, 0,
+                                16 * sizeof(float), obj.vertices);
+                glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+                // Specify Texture
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, obj.text.font->texture_atlas);
+
+                Upload1i(renderer->text_shader, 0, "tex");
+
+                // Draw texture
+                UseShader(renderer->text_shader);
+                glBindVertexArray(renderer->texture_vao);
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            } break;
+
+            case RENDER_TYPE_text:
+            {
+                UploadMatrix4f(renderer->text_shader,
+                               renderer->projection_matrix,
+                               "projection");
+
+                Upload4f(renderer->text_shader, obj.text.color, "color");
+
+                int current_xoffset = 0;
+                for (int i = 0; obj.text.data[i]; ++i)
+                {
+                    stbtt_packedchar *info =
+                        &obj.text.font->characters[obj.text.data[i] - 32];
+
+                    v2 size = v2(info->x1 - info->x0, info->y1 - info->y0);
+                    v2 pos = v2(obj.text.position.x + current_xoffset,
+                                obj.text.position.y);
+                    v2 tl = v2(pos.x, pos.y);
+                    v2 br = v2(pos.x + size.x, pos.y + size.y);
+
+                    f32 scalar_val = 1.f / (f32)(obj.text.font->texture_size);
+                    v2 coord_tl = V2Scalar(v2(info->x0, info->y0), scalar_val);
+                    v2 coord_br = V2Scalar(v2(info->x1, info->y1), scalar_val);
+
+                    current_xoffset += info->xadvance;
+
+                    // Top Right
+                    obj.vertices[0] = br.x;
+                    obj.vertices[1] = tl.y;
+
+                    obj.vertices[2] = coord_br.x;
+                    obj.vertices[3] = coord_tl.y;
+
+                    // Bottom Right
+                    obj.vertices[4] = br.x;
+                    obj.vertices[5] = br.y;
+
+                    obj.vertices[6] = coord_br.x;
+                    obj.vertices[7] = coord_br.y;
+
+                    // Bottom Left
+                    obj.vertices[8] = tl.x;
+                    obj.vertices[9] = br.y;
+
+                    obj.vertices[10] = coord_tl.x;
+                    obj.vertices[11] = coord_br.y;
+
+                    // Top Left
+                    obj.vertices[12] = tl.x;
+                    obj.vertices[13] = tl.y;
+
+                    obj.vertices[14] = coord_tl.x;
+                    obj.vertices[15] = coord_tl.y;
+
+                    glBindBuffer(GL_ARRAY_BUFFER, renderer->texture_vbo);
+                    glBufferSubData(GL_ARRAY_BUFFER, 0,
+                                    16 * sizeof(float), obj.vertices);
+                    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+                    // Specify Texture
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(GL_TEXTURE_2D, obj.text.font->texture_atlas);
+
+                    Upload1i(renderer->text_shader, 0, "text");
+                    UseShader(renderer->text_shader);
+
+                    // Draw texture
+                    glBindVertexArray(renderer->texture_vao);
+                    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+                }
             } break;
 
             default: break;
@@ -664,3 +764,74 @@ internal void RenderTexture(renderer *renderer, v2 position,
     renderer->render_list[renderer->render_list_count++] = obj;
 }
 
+internal void RenderText(renderer *renderer, font *font,
+                         char *text, v2 position, v4 color)
+{
+    // NOTE: VBO data is set in SubmitRender to only bind texture once
+    render_object obj = {0};
+    {
+        text_info t = {0};
+        t.font = font;
+        t.data = text;
+        t.color = color;
+        t.position = position;
+
+        obj.type = RENDER_TYPE_text;
+        obj.text = t;
+    }
+
+    renderer->render_list[renderer->render_list_count++] = obj;
+}
+
+internal void RenderChar(renderer *renderer, font *font,
+                          char character, v2 position, v4 color)
+{
+    render_object obj = {0};
+    {
+        stbtt_packedchar *info = &font->characters[character - 32];
+
+        v2 size = v2(info->x1 - info->x0, info->y1 - info->y0);
+        v2 tl = position;
+        v2 br = v2(position.x + size.x, position.y + size.y);
+
+        f32 scalar_val = 1.f / (f32)(font->texture_size);
+        v2 coord_tl = V2Scalar(v2(info->x0, info->y0), scalar_val);
+        v2 coord_br = V2Scalar(v2(info->x1, info->y1), scalar_val);
+
+        // Top Right
+        obj.vertices[0] = br.x;
+        obj.vertices[1] = tl.y;
+
+        obj.vertices[2] = 1.f;
+        obj.vertices[3] = 1.f;
+
+        // Bottom Right
+        obj.vertices[4] = br.x;
+        obj.vertices[5] = br.y;
+
+        obj.vertices[6] = 1.f;
+        obj.vertices[7] = 0.f;
+
+        // Bottom Left
+        obj.vertices[8] = tl.x;
+        obj.vertices[9] = br.y;
+
+        obj.vertices[10] = 0.f;
+        obj.vertices[11] = 0.f;
+
+        // Top Left
+        obj.vertices[12] = tl.x;
+        obj.vertices[13] = tl.y;
+
+        obj.vertices[14] = 0.f;
+        obj.vertices[15] = 1.f;
+
+        text_info t = {0};
+        t.font = font;
+        t.color = color;
+        obj.text = t;
+        obj.type = RENDER_TYPE_character;
+    }
+
+    renderer->render_list[renderer->render_list_count++] = obj;
+}

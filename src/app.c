@@ -128,10 +128,12 @@ UPDATE_APP
     RenderRect(&state->renderer, v2(100, 100), v2(100.f, 100.f), v4(0.5, 0, 0, 1));
     RenderTriangle(&state->renderer, v2(150, 200), v2(150, 300), v2(300, 300), v4(1, 0, 1, 0.5));
     RenderLine(&state->renderer, v2(0, 0), v2(300, 300), v4(0, 1, 0, 1));
-#endif
-
     RenderTexture(&state->renderer, v2(400, 100),
                   v2(state->text.width, state->text.height), &state->text);
+#endif
+
+    RenderText(&state->renderer, &state->app_font, "Hello world", v2(0, 0), v4(1, 1, 1, 1));
+    RenderChar(&state->renderer, &state->app_font, (char)"H", v2(400, 100), v4(1, 1, 1, 1));
     RenderRect(&state->renderer, test_pos, v2(32.f, 32.f), v4(1.0f, 0.5f, 0.2f, 1.0f));
 
     local_persist ui app_ui = {0};
