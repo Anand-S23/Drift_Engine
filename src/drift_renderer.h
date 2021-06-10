@@ -58,7 +58,7 @@ global const char *text_vertex_shader = "#version 330 core\n"
     "void main()\n"
     "{\n"
         "gl_Position = projection * vec4(pos.x, pos.y, 0.f, 1.f);\n"
-        "tex_coord = vec2(texture_coord.x, texture_coord.y);\n"
+        "tex_coord = vec2(texture_coord.x, 1.0 - texture_coord.y);\n"
    "}\0";
 
 global const char *text_fragment_shader = "#version 330 core\n"
@@ -66,16 +66,18 @@ global const char *text_fragment_shader = "#version 330 core\n"
     "out vec4 frag_color;\n"
 
     "uniform sampler2D text;\n"
-    "uniform vec4 color;\n"
+    "uniform vec3 color;\n"
 
     "void main() {\n"
+
         "vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, tex_coord).a);\n"
-        "frag_color = color * sampled;\n"
+        "frag_color = vec4(color, 1.0) * sampled;\n"
     "}\n\0";
 
 typedef unsigned int shader;
 
 #define MAX_RENDER_OBJECTS 1000
+#define MAX_TEXT_CHARACTERS 60
 
 typedef struct font
 {
@@ -116,15 +118,14 @@ typedef enum render_type
     RENDER_TYPE_rect,
     RENDER_TYPE_texture,
     RENDER_TYPE_text,
-    RENDER_TYPE_character
 } render_type;
 
 typedef struct text_info
 {
-    font *font;
-    char *data;
-    v4 color;
-    v2 position;
+    v3 color;
+    u32 texture_atlas;
+    u32 char_count;
+    f32 vertices[MAX_TEXT_CHARACTERS * 16];
 } text_info;
 
 // TODO: More generic

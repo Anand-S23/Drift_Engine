@@ -83,6 +83,12 @@ internal void UploadMatrix4f(shader shader, matrix4f matrix, char *name)
     glUniformMatrix4fv(location, 1, GL_FALSE, &matrix.elements[0][0]);
 }
 
+internal void Upload3f(shader shader, v3 vec, char *name)
+{
+    int location = glGetUniformLocation(shader, name);
+    glUniform3f(location, vec.x, vec.y, vec.z);
+}
+
 internal void Upload4f(shader shader, v4 vec, char *name)
 {
     int location = glGetUniformLocation(shader, name);
@@ -168,9 +174,13 @@ internal void GenTexFromFontBM(font *font, u8 *bitmap)
     glGenTextures(1, &font->texture_atlas);
     glBindTexture(GL_TEXTURE_2D, font->texture_atlas);
 
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
     glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, font->texture_size, font->texture_size,
                  0, GL_ALPHA, GL_UNSIGNED_BYTE, bitmap);
     glGenerateMipmap(GL_TEXTURE_2D);
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -230,7 +240,7 @@ internal void InitFontPacked(font *font, u8 *font_memory)
         memcpy(&reverse_bitmap[(tex_size - 1 - i) * tex_size],
                &bitmap[i * tex_size], tex_size);
     }
-
+    
     GenTexFromFontBM(font, reverse_bitmap);
     free(bitmap);
     free(reverse_bitmap);
@@ -501,100 +511,31 @@ internal void SubmitRenderer(renderer *renderer)
                 glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
             } break;
 
-            case RENDER_TYPE_character:
-            {
-                UploadMatrix4f(renderer->text_shader,
-                               renderer->projection_matrix,
-                               "projection");
-
-                Upload4f(renderer->text_shader, obj.text.color, "color");
-
-                // Get the data
-                glBindBuffer(GL_ARRAY_BUFFER, renderer->texture_vbo);
-                glBufferSubData(GL_ARRAY_BUFFER, 0,
-                                16 * sizeof(float), obj.vertices);
-                glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-                // Specify Texture
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, obj.text.font->texture_atlas);
-
-                Upload1i(renderer->text_shader, 0, "tex");
-
-                // Draw texture
-                UseShader(renderer->text_shader);
-                glBindVertexArray(renderer->texture_vao);
-                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-            } break;
-
             case RENDER_TYPE_text:
             {
                 UploadMatrix4f(renderer->text_shader,
                                renderer->projection_matrix,
                                "projection");
 
-                Upload4f(renderer->text_shader, obj.text.color, "color");
+                Upload3f(renderer->text_shader, obj.text.color, "color");
 
-                int current_xoffset = 0;
-                for (int i = 0; obj.text.data[i]; ++i)
+                // Specify Texture
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, obj.text.texture_atlas);
+
+                Upload1i(renderer->text_shader, 0, "text");
+
+                UseShader(renderer->text_shader);
+                glBindVertexArray(renderer->texture_vao);
+
+                for (int i = 0; i < obj.text.char_count; ++i)
                 {
-                    stbtt_packedchar *info =
-                        &obj.text.font->characters[obj.text.data[i] - 32];
-
-                    v2 size = v2(info->x1 - info->x0, info->y1 - info->y0);
-                    v2 pos = v2(obj.text.position.x + current_xoffset,
-                                obj.text.position.y);
-                    v2 tl = v2(pos.x, pos.y);
-                    v2 br = v2(pos.x + size.x, pos.y + size.y);
-
-                    f32 scalar_val = 1.f / (f32)(obj.text.font->texture_size);
-                    v2 coord_tl = V2Scalar(v2(info->x0, info->y0), scalar_val);
-                    v2 coord_br = V2Scalar(v2(info->x1, info->y1), scalar_val);
-
-                    current_xoffset += info->xadvance;
-
-                    // Top Right
-                    obj.vertices[0] = br.x;
-                    obj.vertices[1] = tl.y;
-
-                    obj.vertices[2] = coord_br.x;
-                    obj.vertices[3] = coord_tl.y;
-
-                    // Bottom Right
-                    obj.vertices[4] = br.x;
-                    obj.vertices[5] = br.y;
-
-                    obj.vertices[6] = coord_br.x;
-                    obj.vertices[7] = coord_br.y;
-
-                    // Bottom Left
-                    obj.vertices[8] = tl.x;
-                    obj.vertices[9] = br.y;
-
-                    obj.vertices[10] = coord_tl.x;
-                    obj.vertices[11] = coord_br.y;
-
-                    // Top Left
-                    obj.vertices[12] = tl.x;
-                    obj.vertices[13] = tl.y;
-
-                    obj.vertices[14] = coord_tl.x;
-                    obj.vertices[15] = coord_tl.y;
-
                     glBindBuffer(GL_ARRAY_BUFFER, renderer->texture_vbo);
-                    glBufferSubData(GL_ARRAY_BUFFER, 0,
-                                    16 * sizeof(float), obj.vertices);
+                    glBufferSubData(GL_ARRAY_BUFFER, 0, 16 * sizeof(float),
+                                    &obj.text.vertices[i * 16]);
                     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-                    // Specify Texture
-                    glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, obj.text.font->texture_atlas);
-
-                    Upload1i(renderer->text_shader, 0, "text");
-                    UseShader(renderer->text_shader);
-
-                    // Draw texture
-                    glBindVertexArray(renderer->texture_vao);
+                    // Draw character
                     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
                 }
             } break;
@@ -764,74 +705,107 @@ internal void RenderTexture(renderer *renderer, v2 position,
     renderer->render_list[renderer->render_list_count++] = obj;
 }
 
-internal void RenderText(renderer *renderer, font *font,
-                         char *text, v2 position, v4 color)
-{
-    // NOTE: VBO data is set in SubmitRender to only bind texture once
-    render_object obj = {0};
-    {
-        text_info t = {0};
-        t.font = font;
-        t.data = text;
-        t.color = color;
-        t.position = position;
-
-        obj.type = RENDER_TYPE_text;
-        obj.text = t;
-    }
-
-    renderer->render_list[renderer->render_list_count++] = obj;
-}
-
-internal void RenderChar(renderer *renderer, font *font,
-                          char character, v2 position, v4 color)
+internal void RenderTextureAtlas(renderer *renderer, v2 position, v2 size,
+                                 texture *tex, v2 tex_coord_tl, v2 tex_coord_br)
 {
     render_object obj = {0};
     {
-        stbtt_packedchar *info = &font->characters[character - 32];
+        obj.type = RENDER_TYPE_texture;
+        obj.texture = tex;
 
-        v2 size = v2(info->x1 - info->x0, info->y1 - info->y0);
         v2 tl = position;
         v2 br = v2(position.x + size.x, position.y + size.y);
-
-        f32 scalar_val = 1.f / (f32)(font->texture_size);
-        v2 coord_tl = V2Scalar(v2(info->x0, info->y0), scalar_val);
-        v2 coord_br = V2Scalar(v2(info->x1, info->y1), scalar_val);
 
         // Top Right
         obj.vertices[0] = br.x;
         obj.vertices[1] = tl.y;
 
-        obj.vertices[2] = 1.f;
-        obj.vertices[3] = 1.f;
+        obj.vertices[2] = tex_coord_br.x;
+        obj.vertices[3] = tex_coord_tl.y;
 
         // Bottom Right
         obj.vertices[4] = br.x;
         obj.vertices[5] = br.y;
 
-        obj.vertices[6] = 1.f;
-        obj.vertices[7] = 0.f;
+        obj.vertices[6] = tex_coord_br.x;
+        obj.vertices[7] = tex_coord_br.y;
 
         // Bottom Left
         obj.vertices[8] = tl.x;
         obj.vertices[9] = br.y;
 
-        obj.vertices[10] = 0.f;
-        obj.vertices[11] = 0.f;
+        obj.vertices[10] = tex_coord_tl.x;
+        obj.vertices[11] = tex_coord_br.y;
 
         // Top Left
         obj.vertices[12] = tl.x;
         obj.vertices[13] = tl.y;
 
-        obj.vertices[14] = 0.f;
-        obj.vertices[15] = 1.f;
-
-        text_info t = {0};
-        t.font = font;
-        t.color = color;
-        obj.text = t;
-        obj.type = RENDER_TYPE_character;
+        obj.vertices[14] = tex_coord_tl.x;
+        obj.vertices[15] = tex_coord_tl.y;
     }
 
+    renderer->render_list[renderer->render_list_count++] = obj;
+}
+
+internal void RenderText(renderer *renderer, font *font,
+                         char *text, v2 position, v3 color)
+{
+    text_info t = {0};
+    render_object obj = {0};
+    {
+        t.color = color;
+        t.char_count = 0;
+        t.texture_atlas = font->texture_atlas;
+        obj.type = RENDER_TYPE_text;
+    }
+
+    int current_xoffset = 0;
+    for (int i = 0; text[i]; ++i)
+    {
+        int char_index = text[i] - 32;
+        stbtt_packedchar *info = &font->characters[char_index];
+        //stbtt_bakedchar *info = &font->char_data[char_index];
+
+        f32 x_pos = position.x + current_xoffset;
+        f32 y_pos = position.y;
+
+        stbtt_aligned_quad q;
+        stbtt_GetPackedQuad(font->characters, font->texture_size,
+                            font->texture_size, char_index, &x_pos, &y_pos, &q, 1);
+
+        // Top Right
+        t.vertices[i * 16 + 0] = q.x1;
+        t.vertices[i * 16 + 1] = q.y1;
+
+        t.vertices[i * 16 + 2] = q.s1;
+        t.vertices[i * 16 + 3] = q.t1;
+
+        // Bottom Right
+        t.vertices[i * 16 + 4] = q.x1;
+        t.vertices[i * 16 + 5] = q.y0;
+
+        t.vertices[i * 16 + 6] = q.s1;
+        t.vertices[i * 16 + 7] = q.t0;
+
+        // Bottom Left
+        t.vertices[i * 16 + 8] = q.x0;
+        t.vertices[i * 16 + 9] = q.y0;
+
+        t.vertices[i * 16 + 10] = q.s0;
+        t.vertices[i * 16 + 11] = q.t0;
+
+        // Top Left
+        t.vertices[i * 16 + 12] = q.x0;
+        t.vertices[i * 16 + 13] = q.y1;
+
+        t.vertices[i * 16 + 14] = q.s0;
+        t.vertices[i * 16 + 15] = q.t1;
+
+        ++t.char_count;
+        current_xoffset += info->xadvance;
+    }
+
+    obj.text = t;
     renderer->render_list[renderer->render_list_count++] = obj;
 }
