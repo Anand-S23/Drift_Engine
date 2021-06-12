@@ -25,17 +25,6 @@ typedef int64_t  b64;
 typedef float    f32;
 typedef double   f64;
 
-#define Bytes(n)     (n)
-#define Kilobytes(n) (Bytes(n)*1024LL)
-#define Megabytes(n) (Kilobytes(n)*1024LL)
-#define Gigabytes(n) (Megabytes(n)*1024LL)
-#define Terabytes(n) (Gigabytes(n)*1024LL)
-
-#define ArraySize(arr) (sizeof(arr) / sizeof((arr)[0]))
-#define Min(a, b) ((a) < (b) ? (a) : (b))
-#define Max(a, b) ((a) > (b) ? (a) : (b))
-#define AbsoluteValue(a) ((a) > 0 ? (a) : -(a))
-
 #if DRIFT_SLOW
 #define Assert(expr) if(!(expr)) {*(int *)0 = 0;}
 #else 
