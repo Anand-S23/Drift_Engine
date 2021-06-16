@@ -147,6 +147,15 @@ UPDATE_APP
 
         local_persist f32 value = 0.f;
         value = UISlider(&app_ui, UIIDGen(), v2(300, 75), v2(100, 50), value);
+
+        if (UIMenu(&app_ui, UIIDGen(), "Test", v2(450, 10), v2(85, 45), v2(100, 50)))
+        {
+            UIMenuButton(&app_ui, UIIDGen(), "One");
+            UIMenuButton(&app_ui, UIIDGen(), "Two");
+            UIMenuButton(&app_ui, UIIDGen(), "Three");
+        }
+        UIEndMenu(&app_ui);
+                
     }
     UIEndFrame(&app_ui);
 

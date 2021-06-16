@@ -23,6 +23,38 @@ internal v4 UIGetPannelAutoLayoutRect(ui *ui, v4 something)
     v4 rect = {0};
 }
 
+internal v4 UIGetNextAutoLayoutRect(ui *ui)
+{
+    v4 rect = {0};
+    
+    if(ui->auto_layout_stack_pos > 0)
+    {
+        u32 i = ui->auto_layout_stack_pos - 1;
+        
+        rect.x      = ui->auto_layout_stack[i].position.x;
+        rect.y      = ui->auto_layout_stack[i].position.y;
+        rect.width  = ui->auto_layout_stack[i].size.x;
+        rect.height = ui->auto_layout_stack[i].size.y;
+        
+        if(ui->auto_layout_stack[i].is_column)
+        {
+            rect.y += ui->auto_layout_stack[i].progress;
+            ui->auto_layout_stack[i].progress += rect.height;
+        }
+        else
+        {
+            rect.x += ui->auto_layout_stack[i].progress;
+            ui->auto_layout_stack[i].progress += rect.width;
+        }
+    }
+    else
+    {
+        DriftLogWarning("No more space left");
+        rect = v4(0, 0, 64, 64);
+    }
+    
+    return rect;
+}
 
 internal void UIBeginFrame(ui *ui, renderer *renderer)
 {
@@ -80,8 +112,105 @@ internal void UIEndFrame(ui *ui)
     }
 }
 
-internal void UIMenu(ui *ui, v2 start_pos, v2 element_size)
+internal void UIPushColumn(ui *ui, v2 position, v2 size)
 {
+    Assert(ui->auto_layout_stack_pos < UI_MAX_AUTO_LAYOUT_GROUPS);
+    u32 i = ui->auto_layout_stack_pos++;
+    ui->auto_layout_stack[i].is_column = 1;
+    ui->auto_layout_stack[i].position = position;
+    ui->auto_layout_stack[i].size = size;
+    ui->auto_layout_stack[i].progress = 0;
+}
+
+internal void UIPopColumn(ui *ui)
+{
+    if (ui->auto_layout_stack_pos > 0)
+    {
+        --ui->auto_layout_stack_pos;
+    }
+}
+
+internal b32 UIMenuInternal(ui *ui, ui_id id, char *text, v2 pos, v2 size)
+{
+    Assert(ui->widget_count < UI_MAX_WIDGETS);
+    
+    b32 is_open = UIIDEqual(ui->open_menu, id);
+    
+    b32 cursor_is_over = (ui->mouse_x >= pos.x &&
+                          ui->mouse_x <= pos.x + size.width &&
+                          ui->mouse_y >= pos.y &&
+                          ui->mouse_y <= pos.y + size.height);
+    
+    if (!UIIDEqual(ui->hot, id) && cursor_is_over)
+    {
+        ui->hot = id;
+
+        // If another menu is open cursor_is_over open_menu will change
+        if (!UIIDEqual(ui->open_menu, UIIDNull()))
+        {
+            ui->open_menu = id;
+        }
+                
+    }
+    else if (UIIDEqual(ui->hot, id) && !cursor_is_over)
+    {
+        ui->hot = UIIDNull();
+    }
+    
+    if (UIIDEqual(ui->active, id))
+    {
+        if(!ui->left_mouse_down)
+        {
+            is_open = (is_open == 0) ? 1 : 0;
+            ui->active = UIIDNull();
+
+            if (!is_open)
+            {
+                ui->open_menu = UIIDNull();
+            }
+        }
+    }
+    else if (UIIDEqual(ui->hot, id))
+    {
+        if (ui->left_mouse_down)
+        {
+            ui->active = id;
+        }
+    }
+    else if (UIIDEqual(ui->hot, UIIDNull()))
+    {
+        if (ui->left_mouse_down && is_open)
+        {
+            is_open = 0;
+            ui->open_menu = UIIDNull();
+        }
+    }
+    
+    ui_widget *widget = ui->widgets + ui->widget_count++;
+    widget->type = UI_WIDGET_button;
+    widget->id = id;
+    widget->position = pos;
+    widget->size = size;
+
+    if (is_open)
+    {
+        ui->open_menu = id;
+    }
+    
+    return is_open;
+}
+
+internal b32 UIMenu(ui *ui, ui_id id, char *text,
+                     v2 mb_pos, v2 mb_size, v2 element_size)
+{
+    v2 element_pos = v2(mb_pos.x, mb_pos.y + mb_size.height);
+    UIPushColumn(ui, element_pos, element_size);
+    return UIMenuInternal(ui, id, text, mb_pos, mb_size);
+}
+
+internal void UIEndMenu(ui *ui)
+{
+    UIPopColumn(ui);
 }
 
 internal b32 UIButtonInternal(ui *ui, ui_id id, char *text,
@@ -132,6 +261,13 @@ internal b32 UIButtonInternal(ui *ui, ui_id id, char *text,
     widget->size = size;
     
     return is_triggered;
+}
+
+internal b32 UIMenuButton(ui *ui, ui_id id, char *text)
+{
+    v4 rect = UIGetNextAutoLayoutRect(ui);
+    return UIButtonInternal(ui, id, text, v2(rect.x, rect.y),
+                            v2(rect.width, rect.height));
 }
 
 internal b32 UIButton(ui *ui, ui_id id, char *text,
