@@ -339,6 +339,12 @@ internal void InitRenderer(renderer *renderer)
         DriftLogError("Glad did not load");
     }
 
+    // TODO: Add assest path to platform
+    if (!InitFont(&renderer->d_font, "W:\\drift_engine\\assets\\arial.ttf", 18))
+    {
+        DriftLogWarning("Error with initializg font");
+    }
+
     // Enable opacity
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

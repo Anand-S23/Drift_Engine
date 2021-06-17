@@ -90,7 +90,14 @@ internal void UIEndFrame(ui *ui)
                     0.6f + widget->t_hot * 0.4f - widget->t_active * 0.5f,
                 };
                 
+                font *df = &ui->renderer->d_font;
+                f32 text_width = GetTextWidth(df, widget->text);
+                v2 offset = v2((widget->size.width - text_width) / 2,
+                               (widget->size.height - df->size) / 2 + (df->size / 2));
+                v2 text_pos = V2Add(widget->position, offset);
+
                 RenderRect(ui->renderer, widget->position, widget->size, color);
+                RenderText(ui->renderer, df, widget->text, text_pos, widget->text_color);
             } break;
             
             case UI_WIDGET_slider:
@@ -191,6 +198,8 @@ internal b32 UIMenuInternal(ui *ui, ui_id id, char *text, v2 pos, v2 size)
     widget->id = id;
     widget->position = pos;
     widget->size = size;
+    widget->text = text;
+    widget->text_color = v3(1, 1, 1);
 
     if (is_open)
     {
@@ -259,6 +268,8 @@ internal b32 UIButtonInternal(ui *ui, ui_id id, char *text,
     widget->id = id;
     widget->position = position;
     widget->size = size;
+    widget->text = text;
+    widget->text_color = v3(1, 1, 1);
     
     return is_triggered;
 }

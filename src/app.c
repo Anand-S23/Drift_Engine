@@ -23,7 +23,7 @@ INIT_APP
 
     int *z = RemoveType(&list, 5, int);
 
-    if (!InitFont(&state->app_font, "W:\\drift_engine\\misc\\arial.ttf", 48))
+    if (!InitFont(&state->app_font, "W:\\drift_engine\\assets\\arial.ttf", 48))
     {
         DriftLogWarning("Error with initializg font");
     }
@@ -136,6 +136,8 @@ UPDATE_APP
 
     RenderRect(&state->renderer, test_pos, v2(32.f, 32.f), v4(1.0f, 0.5f, 0.2f, 1.0f));
 
+    RenderText(&state->renderer, &state->app_font, "Yo it's working!", v2(100, 300), v3(1, 0, 0));
+
     local_persist ui app_ui = {0};
     UIBeginFrame(&app_ui, &state->renderer);
     {
@@ -158,8 +160,6 @@ UPDATE_APP
                 
     }
     UIEndFrame(&app_ui);
-
-    RenderText(&state->renderer, &state->app_font, "Yo it's working!", v2(100, 300), v3(1, 1, 1));
 
     SubmitRenderer(&state->renderer);
     platform->SwapBuffers();

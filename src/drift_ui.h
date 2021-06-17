@@ -36,6 +36,8 @@ typedef struct ui_widget
     ui_id id;
     v2 position;
     v2 size;
+    char *text;
+    v3 text_color;
     f32 t_hot;
     f32 t_active;
     
@@ -56,6 +58,7 @@ typedef struct ui
     b32 right_mouse_down;
 
     renderer *renderer;
+    font ui_font;
     
     u32 widget_count;
     ui_widget widgets[UI_MAX_WIDGETS];

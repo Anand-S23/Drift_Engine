@@ -155,6 +155,8 @@ typedef struct renderer
     u32 texture_vbo;
     u32 texture_ebo;
 
+    font d_font;
+
     render_object render_list[MAX_RENDER_OBJECTS];
     u32 render_list_count;
 } renderer;
