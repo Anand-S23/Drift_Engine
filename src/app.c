@@ -28,6 +28,58 @@ INIT_APP
         DriftLogWarning("Error with initializg font");
     }
 
+    texture_buffer buffer;
+    InitTextureBuffer(&buffer, 256, 256);
+    ClearTextureBuffer(&buffer,v4(0.f, 0.f, 0.f, 1.f));
+
+    int color_count = 0;
+    for (int j = 0; j < 2; ++j)
+    {
+        for (int i = 0; i < 2; ++i)
+        {
+            v4 color;
+            color_count++;
+            switch (color_count)
+            {
+                case 1:
+                    color = v4(0.5, 0.5, 0.5, 1);
+                    break;
+
+                case 2:
+                    color = v4(0.f, 0.f, 1.f, 1);
+                    break;
+
+                case 3:
+                    color = v4(0.f, 1.f, 0.f, 1);
+                    break;
+
+                case 4:
+                    color = v4(1.f, 0.f, 0.f, 1);
+                    break;
+            }
+
+            RenderRectToBuffer(&buffer, v2(i * 128, j * 128), v2(128, 128), color);
+        }
+    }
+
+    // TODO: Fix ReverseBuffer
+    // ReverseBuffer((u8 *)buffer.memory, buffer.width, buffer.height);
+
+    u8 *reverse_buffer = (u8 *)malloc(buffer.width * buffer.height * 4);
+    u8 *bm = (u8 *)buffer.memory;
+    int nh = buffer.height - 1;
+    for (int i = nh; i >= 0; --i)
+    {
+        memcpy(&reverse_buffer[(nh - i) * buffer.width * 4],
+               &bm[i * buffer.width * 4], buffer.width * 4);
+    }
+
+    memcpy(bm, reverse_buffer, buffer.width * buffer.height * 4);
+
+    texture test = CreateTextureFromData(buffer.memory, buffer.width, buffer.height);
+    free(reverse_buffer);
+    free(buffer.memory);
+
     texture text_tex = {0};
     text_tex.id = state->app_font.texture_atlas;
     text_tex.width = state->app_font.texture_size;
@@ -36,6 +88,7 @@ INIT_APP
     
     state->text = text_tex;
     state->tex = CreateTexture("W:\\drift_engine\\misc\\duck.png");
+    state->tex = test;
     state->mb = CreateTexture("W:\\drift_engine\\misc\\l.png");
     state->back = CreateTexture("W:\\drift_engine\\misc\\Background01.png");
 
@@ -133,6 +186,7 @@ UPDATE_APP
                        &state->text);
 #endif
 
+    RenderTexture(&state->renderer, v2(100, 100), v2(300, 300), &state->tex);
 
     RenderRect(&state->renderer, test_pos, v2(32.f, 32.f), v4(1.0f, 0.5f, 0.2f, 1.0f));
 

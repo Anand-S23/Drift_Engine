@@ -95,6 +95,7 @@ typedef struct font
 	int baseline;
 } font;
 
+// NOTE: Bytes per pixel will always be 4 (RGBA)
 typedef struct texture_buffer
 {
     void *memory;

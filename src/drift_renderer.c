@@ -101,8 +101,20 @@ internal void Upload1i(shader shader, u32 val, char *name)
     glUniform1i(location, val);
 }
 
+internal void ReverseBuffer(u8 *buffer, int width, int height)
+{
+    u8 *reverse_buffer = (u8 *)malloc(width * height);
+    int nh = height - 1;
+    for (int i = nh; i >= 0; --i)
+    {
+        memcpy(&reverse_buffer[(nh - i) * width], &buffer[i * width], width);
+    }
+
+    memcpy(&buffer, &reverse_buffer, width * height);
+    free(reverse_buffer);
+}
+
 // Textures
-    
 
 internal texture CreateTexture(char *filename)
 {
@@ -166,6 +178,9 @@ internal texture CreateTextureFromData(u8 *data, int texture_width,
     glBindTexture(GL_TEXTURE_2D, 0);
     return tex;
 }
+
+#define CreateTextureFromBuffer(buffer) \
+    CreateTextureFromData((u8 *)buffer->memory, buffer->width, buffer->height)
 
 // Font
 
@@ -240,7 +255,7 @@ internal void InitFontPacked(font *font, u8 *font_memory)
         memcpy(&reverse_bitmap[(tex_size - 1 - i) * tex_size],
                &bitmap[i * tex_size], tex_size);
     }
-    
+
     GenTexFromFontBM(font, reverse_bitmap);
     free(bitmap);
     free(reverse_bitmap);
@@ -815,3 +830,65 @@ internal void RenderText(renderer *renderer, font *font,
     obj.text = t;
     renderer->render_list[renderer->render_list_count++] = obj;
 }
+
+// Texture Buffer
+
+internal void InitTextureBuffer(texture_buffer *buffer, int width, int height)
+{
+    buffer->width = width;
+    buffer->height = height;
+    buffer->pitch = width * 4;
+    buffer->memory = malloc(width * height * 4);
+}
+
+internal void ClearTextureBuffer(texture_buffer *buffer, v4 color)
+{
+    int width = buffer->width;
+    int height = buffer->height;
+    
+    u8 *row = (u8 *)buffer->memory;
+    for (int y = 0; y < height; ++y)
+    {
+        u32 *pixel = (u32 *)row;
+        for (int x = 0; x < width; ++x)
+        {
+            u8 red   = (u8)(color.r * 255.f);
+            u8 green = (u8)(color.g * 255.f);
+            u8 blue  = (u8)(color.b * 255.f);
+            u8 alpha = (u8)(color.a * 255.f);
+
+            *pixel++ = ((alpha << 24) | (blue << 16) | (green << 8) | red);
+        }
+
+        row += buffer->pitch;
+    }
+}
+
+internal void RenderRectToBuffer(texture_buffer *buffer,
+                                 v2 position, v2 size, v4 color)
+{
+    i32 min_x = Max(0, (i32)position.x);
+    i32 min_y = Max(0, (i32)position.y);
+    i32 max_x = Min((buffer->width), (min_x + (i32)size.width));
+    i32 max_y = Min((buffer->height), (min_y + (i32)size.height));
+    
+    u8 *row = (u8 *)buffer->memory + min_x * 4 + min_y * buffer->pitch; 
+
+    u8 red   = (u8)(color.r * 255.f);
+    u8 green = (u8)(color.g * 255.f);
+    u8 blue  = (u8)(color.b * 255.f);
+    u8 alpha = (u8)(color.a * 255.f);
+
+    for(i32 j = min_y; j < max_y; ++j)
+    {
+        u32 *pixel = (u32 *)row;
+        for(i32 i = min_x; i < max_x; ++i)
+        {
+
+            *pixel++ = ((alpha << 24) | (blue << 16) | (green << 8) | red);
+        }
+
+        row += buffer->pitch; 
+    }
+}
+    
