@@ -62,22 +62,8 @@ INIT_APP
         }
     }
 
-    // TODO: Fix ReverseBuffer
-    // ReverseBuffer((u8 *)buffer.memory, buffer.width, buffer.height);
-
-    u8 *reverse_buffer = (u8 *)malloc(buffer.width * buffer.height * 4);
-    u8 *bm = (u8 *)buffer.memory;
-    int nh = buffer.height - 1;
-    for (int i = nh; i >= 0; --i)
-    {
-        memcpy(&reverse_buffer[(nh - i) * buffer.width * 4],
-               &bm[i * buffer.width * 4], buffer.width * 4);
-    }
-
-    memcpy(bm, reverse_buffer, buffer.width * buffer.height * 4);
-
+    ReverseBuffer((u8 *)buffer.memory, buffer.width, buffer.height);
     texture test = CreateTextureFromData(buffer.memory, buffer.width, buffer.height);
-    free(reverse_buffer);
     free(buffer.memory);
 
     texture text_tex = {0};
@@ -188,7 +174,9 @@ UPDATE_APP
 
     RenderTexture(&state->renderer, v2(100, 100), v2(300, 300), &state->tex);
 
-    RenderRect(&state->renderer, test_pos, v2(32.f, 32.f), v4(1.0f, 0.5f, 0.2f, 1.0f));
+    u32 tpc = PackRGBA(v4(1.f, 0.5f, 0.2f, 1.f));
+    v4 tuc = UnpackRGBA(tpc);
+    RenderRect(&state->renderer, test_pos, v2(32.f, 32.f), tuc);
 
     RenderText(&state->renderer, &state->app_font, "Yo it's working!", v2(100, 300), v3(1, 0, 0));
 

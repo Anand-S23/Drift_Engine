@@ -103,14 +103,17 @@ internal void Upload1i(shader shader, u32 val, char *name)
 
 internal void ReverseBuffer(u8 *buffer, int width, int height)
 {
-    u8 *reverse_buffer = (u8 *)malloc(width * height);
+
+    u8 *reverse_buffer = (u8 *)malloc(width * height * 4);
+    u8 *bm = (u8 *)buffer;
+    int pitch = width * 4;
     int nh = height - 1;
     for (int i = nh; i >= 0; --i)
     {
-        memcpy(&reverse_buffer[(nh - i) * width], &buffer[i * width], width);
+        memcpy(&reverse_buffer[(nh - i) * pitch], &bm[i * pitch], pitch);
     }
 
-    memcpy(&buffer, &reverse_buffer, width * height);
+    memcpy(bm, reverse_buffer, width * height * 4);
     free(reverse_buffer);
 }
 

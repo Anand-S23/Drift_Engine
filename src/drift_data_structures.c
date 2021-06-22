@@ -8,6 +8,7 @@ internal node *CreateNode(void *data, node* next)
     node *ret_node = (node *)malloc(sizeof(node));
     ret_node->data = data;
     ret_node->next = next;
+    ret_node->prev = NULL;
     return ret_node;
 }
 
@@ -26,6 +27,7 @@ internal void Push(linked_list *list, void *data)
 {
     node *new_node = CreateNode(data, NULL);
     new_node->next = list->head;
+    list->head->prev = new_node;
     list->head = new_node;
 
     if (list->tail == NULL)

@@ -260,6 +260,27 @@ static v3 V3Cross(v3 vec1, v3 vec2)
               vec1.x * vec2.y - vec1.y * vec2.x);
 }
 
+static u32 PackRGBA(v4 color)
+{
+    u8 red   = (u8)(color.r * 255.f);
+    u8 green = (u8)(color.g * 255.f);
+    u8 blue  = (u8)(color.b * 255.f);
+    u8 alpha = (u8)(color.a * 255.f);
+
+    u32 result = ((alpha << 24) | (blue << 16) | (green << 8) | red);
+    return result;
+}
+
+static v4 UnpackRGBA(u32 color)
+{
+    u8 red   = ((u8)color);
+    u8 green = (color >> 8);
+    u8 blue  = (color >> 16);
+    u8 alpha = (color >> 24);
+
+    return V4Scalar(v4(red, green, blue, alpha), (1.f / 255.f));
+}
+
 typedef struct matrix4f
 {
     float elements[4][4];
