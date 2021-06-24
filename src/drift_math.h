@@ -358,8 +358,6 @@ static matrix4f Matrix4fFromV4(v4 vec1, v4 vec2, v4 vec3, v4 vec4)
     return m;
 }
 
-// TODO: Invere, Multiply
-
 static matrix4f Matrix4fTranspose(matrix4f mat)
 {
     matrix4f m = {0};
@@ -515,6 +513,60 @@ static matrix4f Matrix4fMultiply(matrix4f m1, matrix4f m2)
                     e20, e21, e22, e23, e30, e31, e32, e33);
 }
 
+static matrix4f Matrix4fInverse(matrix4f m)
+{
+    f32 m00 = m.elements[0][0]; f32 m01 = m.elements[0][1];
+    f32 m02 = m.elements[0][2]; f32 m03 = m.elements[0][3];
+
+    f32 m10 = m.elements[1][0]; f32 m11 = m.elements[1][1];
+    f32 m12 = m.elements[1][2]; f32 m13 = m.elements[1][3];
+
+    f32 m20 = m.elements[2][0]; f32 m21 = m.elements[2][1];
+    f32 m22 = m.elements[2][2]; f32 m23 = m.elements[2][3];
+
+    f32 m30 = m.elements[3][0]; f32 m31 = m.elements[3][1];
+    f32 m32 = m.elements[3][2]; f32 m33 = m.elements[3][3];
+
+    matrix4f res;
+    res.elements[0][0] = m11*m22*m33 - m11*m23*m32 - m21*m12*m33 +
+                         m12*m13*m32 + m31*m12*m23 - m31*m13*m22;
+    res.elements[0][1] = -m01*m22*m33 + m01*m23*m32 + m21*m02*m33 -
+                         m21*m03*m32 - m31*m02*m23 + m31*m03*m22;
+    res.elements[0][2] = m01*m12*m33 - m01*m13*m32 - m11*m02*m33 +
+                         m11*m03*m32 + m31*m02*m13 - m31*m03*m12;
+    res.elements[0][3] = -m01*m12*m23 + m01*m13*m22 + m11*m02*m23 -
+                         m11*m03*m22 - m21*m02*m13 + m21*m03*m12;
+
+    res.elements[1][0] = -m10*m22*m33 + m10*m23*m32 + m20*m12*m33 -
+                         m20*m13*m32 - m30*m12*m23 + m30*m13*m22;
+    res.elements[1][1] = m00*m22*m33 - m00*m23*m32 - m20*m02*m33 +
+                         m20*m03*m32 + m30*m02*m23 - m30*m03*m22;
+    res.elements[1][2] = -m00*m12*m33 + m00*m13*m32 + m10*m02*m33 -
+                         m10*m03*m32 - m30*m02*m13 + m30*m03*m12;
+    res.elements[1][3] = m00*m12*m23 - m00*m13*m22 - m10*m02*m23 +
+                         m10*m03*m22 + m20*m02*m13 - m20*m03*m12;
+
+    res.elements[2][0] = m10*m21*m33 - m10*m23*m31 - m20*m11*m33 +
+                         m20*m13*m31 + m30*m11*m23 - m30*m13*m21;
+    res.elements[2][1] = -m00*m21*m33 + m00*m23*m31 + m20*m01*m33 -
+                         m20*m03*m31 - m30*m01*m23 + m30*m03*m21;
+    res.elements[2][2] = m00*m11*m33 - m00*m13*m31 - m10*m01*m33 +
+                         m10*m03*m31 + m30*m01*m13 - m30*m03*m11;
+    res.elements[2][3] = m00*m11*m23 + m00*m13*m21 + m10*m01*m23 -
+                         m10*m03*m21 - m20*m01*m13 + m20*m03*m11;
+
+    res.elements[3][0] = -m10*m21*m32 + m10*m22*m31 + m20*m11*m32 -
+                         m20*m12*m31 - m30*m11*m22 + m30*m12*m21;
+    res.elements[3][1] = m00*m21*m32 - m00*m22*m31 - m20*m01*m32 +
+                         m20*m02*m31 + m30*m01*m22 - m30*m02*m21;
+    res.elements[3][2] = -m00*m11*m32 + m00*m12*m31 + m10*m01*m32 -
+                         m10*m02*m31 - m30*m01*m12 + m30*m02*m11;
+    res.elements[3][3] = m00*m11*m22 - m00*m12*m21 - m10*m01*m22 +
+                         m10*m02*m21 + m20*m01*m12 - m20*m02*m11;
+
+    return res;
+}
+
 static matrix4f OrthographicMatrix(f32 left, f32 right,
                                    f32 bottom, f32 top,
                                    f32 near_plane, f32 far_plane)
@@ -549,6 +601,18 @@ static void ScaleMatrix(matrix4f *m, v3 scale)
 }
 */
 
-// TODO: Qauterions
+// Qauterions
+
+typedef struct quat
+{
+    struct
+    {
+        float x;
+        float y;
+        float z;
+    };
+
+    float w;
+} quat;
 
 #endif
