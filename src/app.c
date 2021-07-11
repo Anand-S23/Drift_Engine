@@ -11,8 +11,19 @@ global app_state *state;
 
 INIT_APP
 {
-    Assert(sizeof(app_state) <= platform->storage_size);
-    state = (app_state *)platform->storage;
+    Assert(sizeof(app_state) <= platform->permanent_storage_size);
+    state = (app_state *)platform->permanent_storage;
+
+    // App Memory
+    state->permanent_arena = InitMemArena(memory->permanent_storage,
+                                          memory->permanent_storage_size);
+    state->temp_arena = InitMemArena(memory->temp_storage,
+                                     memory->temp_storage_size);
+    AllocateMemArena(&state->permanent_arena, sizeof(app_state));
+
+    memory_sub_arena renderer_sub_arena =
+        InitMemSubArena(state->permanent_arena, Megabytes(16));
+
     InitRenderer(&state->renderer);
 
     linked_list list = CreateList();

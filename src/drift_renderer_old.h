@@ -112,14 +112,6 @@ typedef struct texture
     int channels;
 } texture;
 
-typedef enum render_command
-{
-    RENDER_COMMAND_begin,
-    RENDER_COMMAND_submit,
-    RENDER_COMMAND_clear,
-    RENDER_COMMAND_viewport,
-} render_command;
-
 typedef enum render_type
 {
     RENDER_TYPE_line, 

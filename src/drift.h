@@ -108,10 +108,10 @@ typedef struct drift_platform
     int window_height;
     
     // App Memory
-    void *storage;
-    u64 storage_size; 
-    void *transient_storage; 
-    u32 transient_storage_size;
+    void *game_storage;
+    u64 game_storage_size; 
+    void *temp_storage; 
+    u32 temp_storage_size;
 
     b32 initialized;
 
@@ -157,6 +157,7 @@ enum
 #define DriftLogError(...) platform->Log(LOG_ERROR, __FILENAME__, __LINE__, __VA_ARGS__)
 
 #include "drift_math.h"
+#include "drift_memory.c"
 #include "drift_renderer.c"
 #include "drift_ui.c"
 #include "drift_data_structures.c"

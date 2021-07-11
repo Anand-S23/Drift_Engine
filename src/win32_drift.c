@@ -756,15 +756,17 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE prev_instance,
                 Global_Platform.window_width = (int)window_size.x;
                 Global_Platform.window_height = (int)window_size.y;
 
-                Global_Platform.storage_size = Megabytes(64); 
-                Global_Platform.transient_storage_size = Megabytes(100);
-                Global_Platform.storage =
-                    VirtualAlloc(0, Global_Platform.storage_size,
+                Global_Platform.permanent_storage_size = Megabytes(64); 
+                Global_Platform.temp_storage_size = Megabytes(100);
+                Global_Platform.permanent_storage =
+                    VirtualAlloc(0, Global_Platform.permanent_storage_size,
                                  MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-                Global_Platform.transient_storage =
-                    VirtualAlloc(0, Global_Platform.transient_storage_size,
+                Global_Platform.temp_storage =
+                    VirtualAlloc(0, Global_Platform.temp_storage_size,
                                  MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
+                // TODO: Cursor control
+                // TODO: File path stuff
                 Global_Platform.SwapBuffers = Win32SwapBuffers;
                 Global_Platform.ReadFile = Win32ReadFile;
                 Global_Platform.FreeFileMemory = Win32FreeFileMemory;

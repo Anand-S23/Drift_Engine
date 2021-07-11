@@ -3,8 +3,8 @@
 
 typedef struct app_state
 {
-    // memory_arena permanent_arena;
-    // memory_arena transient_arena;
+    memory_arena permanent_arena;
+    memory_arena temp_arena;
 
     // ui ui;
     renderer renderer;
