@@ -15,14 +15,14 @@ INIT_APP
     state = (app_state *)platform->permanent_storage;
 
     // App Memory
-    state->permanent_arena = InitMemArena(memory->permanent_storage,
-                                          memory->permanent_storage_size);
-    state->temp_arena = InitMemArena(memory->temp_storage,
-                                     memory->temp_storage_size);
+    state->permanent_arena = InitMemArena(platform->permanent_storage,
+                                          platform->permanent_storage_size);
+    state->temp_arena = InitMemArena(platform->temp_storage,
+                                     platform->temp_storage_size);
     AllocateMemArena(&state->permanent_arena, sizeof(app_state));
 
-    memory_sub_arena renderer_sub_arena =
-        InitMemSubArena(state->permanent_arena, Megabytes(16));
+    memory_arena renderer_sub_arena =
+        InitMemSubArena(&state->permanent_arena, Megabytes(16));
 
     InitRenderer(&state->renderer);
 

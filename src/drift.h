@@ -33,7 +33,26 @@ typedef double   f64;
 
 #define __FILENAME__ (strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 
-// TODO: Memset
+inline void MemoryCopy(void *v_dest, void *v_src, u32 size)
+{
+    u8 *dest = (u8 *)v_dest;
+    u8 *src = (u8 *)v_src;
+
+    while (size--)
+    {
+        *dest++ = *src++;
+    }
+}
+
+inline void MemorySet(void *v_dest, int val, u32 size)
+{
+    u8 *dest = (u8 *)v_dest;
+
+    while (size--)
+    {
+        *dest++ = (u8)val;
+    }
+}
 
 inline u32 SafeTruncateUInt64(u64 value)
 {
@@ -108,8 +127,8 @@ typedef struct drift_platform
     int window_height;
     
     // App Memory
-    void *game_storage;
-    u64 game_storage_size; 
+    void *permanent_storage;
+    u64 permanent_storage_size; 
     void *temp_storage; 
     u32 temp_storage_size;
 
