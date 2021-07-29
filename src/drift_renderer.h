@@ -13,18 +13,22 @@ typedef struct texture
     int channels;
 } texture;
 
-typedef enum rqi_type
+typedef enum render_type
 {
-    RENDER_TYPE_begin,
-    RENDER_TYPE_submit,
-    RENDER_TYPE_clear,
-    RENDER_TYPE_viewport,
-
     RENDER_TYPE_line, 
     RENDER_TYPE_triangle,
     RENDER_TYPE_rect,
     RENDER_TYPE_texture,
-    RENDER_TYPE_text,
+    RENDER_TYPE_text
+} render_type;
+
+typedef enum rqi_type
+{
+    RQI_TYPE_begin_pass,
+    RQI_TYPE_end_pass,
+    RQI_TYPE_clear,
+    RQI_TYPE_viewport,
+    RQI_TYPE_render
 } render_type;
 
 typedef struct render_queue_item
@@ -36,8 +40,9 @@ typedef struct render_queue_item
 
 typedef struct render_queue
 {
-    render_queue_item items[MAX_RENDE_OBJECTS];
     u32 count;
+    render_queue_item items[MAX_RENDE_OBJECTS];
+    u32 buffer_used;
     void *queue_data_buffer;
 } render_queue;
 
