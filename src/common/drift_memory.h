@@ -1,6 +1,14 @@
 #ifndef MEMORY_H 
 #define MEMORY_H
 
+typedef struct buffer
+{
+    u8 *data;
+    u32 size;
+    u32 offset;
+    u32 position;
+} buffer;
+
 typedef struct memory_arena
 {
     void *memory;

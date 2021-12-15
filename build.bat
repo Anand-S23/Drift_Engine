@@ -11,7 +11,7 @@ set platform_link_flags= gdi32.lib user32.lib winmm.lib shell32.lib kernel32.lib
 set external= %g%\src\glad.c -I%src% -I%stb% -I%g%\include -I%gl%
 
 set src_file=../src/app.c
-set engine_file=../src/win32_drift.c
+set engine_file=../src/platform/win32_drift.c
 
 IF NOT EXIST build mkdir build
 pushd build

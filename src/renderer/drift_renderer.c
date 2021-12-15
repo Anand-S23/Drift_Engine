@@ -1,38 +1,5 @@
 #include <glad/glad.h>
-
-// Pushes item with no data onto queue
-internal b32 RenderQueuePushItemOnly(renderer *renderer, rqi_type type)
-{
-    render_queue_item rqi = {0};
-    {
-        rqi.type = type;
-    }
-
-    renderer->queue.items[renderer->queue.count++] = rqi;
-    return 1; 
-}
-
-// Pushes items with data onto queue
-internal b32 RenderQueuePushItem(renderer *renderer, rqi_type type,
-                                  void *buffer, u32 size)
-{
-    render_queue_item rqi = {0};
-    {
-        rqi.type = type;
-        rqi.offset = renderer->queue.buffer_used;
-        rqi.size = size;
-    }
-
-    if (renderer->queue.buffer_used + size < sizeof(items))
-    {
-        renderer->queue.items[renderer->queue.count++] = rqi;
-        MemoryCopy((u8 *)renderer->queue + renderer->queue.buffer_used, buffer, size);
-        renderer->queue.buffer_used += size;
-        return 1; 
-    }
-
-    return 0;
-}
+#include "drift_renderer.h"
 
 // Initializes renderer 
 internal void InitRenderer(renderer *renderer, memory_arena *arena)
@@ -42,7 +9,7 @@ internal void InitRenderer(renderer *renderer, memory_arena *arena)
         DriftLogError("Glad did not load");
     }
 
-    // TODO: Add assest path to platform
+    // TODO: Hardcoded font path -> need to add to drift
     if (!InitFont(&renderer->d_font, "W:\\drift_engine\\assets\\arial.ttf", 18))
     {
         DriftLogWarning("Error with initializg font");
@@ -131,22 +98,23 @@ internal void InitRenderer(renderer *renderer, memory_arena *arena)
 }
 
 // Clears entire screen to color that was passed in 
-internal void ClearScreen(v4 color)
+internal void ClearScreen(renderer *renderer, v4 color)
 {
     // TODO: Add flags for advanced renderering
-    RenderQueuePushItem(renderer, RENDERER_TYPE_clear,
-                        (void *)color, sizeof(v4));
+    u32 packed_color = PackRGBA(color);
+    RenderQueuePushItem(&renderer->queue, RQI_TYPE_clear,
+                        (void *)&packed_color, sizeof(u32));
 }
 
-internal void BeginRenderer(renderer *renderer, int widow_width, int width_height)
+internal void BeginRenderer(renderer *renderer, int window_width, int window_height)
 {
     renderer->window_width = window_width;
     renderer->window_height = window_height;
 
-    RenderQueuePushItemOnly(renderer, RENDERER_TYPE_begin_pass);
+    RenderQueuePushItemOnly(&renderer->queue, RQI_TYPE_begin_pass);
     
     v2 window_dimension = v2(window_width, window_height);
-    RenderQueuePushItem(renderer, RENDERER_TYPE_viewport,
+    RenderQueuePushItem(&renderer->queue, RQI_TYPE_viewport,
                         (void *)window_dimension, sizeof(v2));
 
     renderer->queue.count = 0;

@@ -69,7 +69,7 @@ typedef struct read_file_result
 enum
 {
 #define Key(name, str) KEY_##name,
-#include "drift_key_list.h"
+#include "common/drift_key_list.h"
     KEY_MAX
 };
 
@@ -175,11 +175,11 @@ enum
 #define DriftLogWarning(...) platform->Log(LOG_WARNING, __FILENAME__, __LINE__, __VA_ARGS__)
 #define DriftLogError(...) platform->Log(LOG_ERROR, __FILENAME__, __LINE__, __VA_ARGS__)
 
-#include "drift_math.h"
-#include "drift_memory.c"
-#include "drift_renderer.c"
-#include "drift_ui.c"
-#include "drift_data_structures.c"
+#include "math/drift_math.h"
+#include "common/drift_memory.c"
+#include "renderer/drift_renderer.c"
+#include "common/drift_ui.c"
+#include "common/drift_data_structures.c"
 
 // TODO: Window styles are for non windows platform 
 typedef enum drift_window_styles
