@@ -1,5 +1,4 @@
-/build
-/pixelate
-/drift_old
-/misc
-TODO.txt
+build/
+old/
+third_party/
+build.*
