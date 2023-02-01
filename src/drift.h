@@ -30,9 +30,29 @@ typedef int64_t  b64;
 typedef float    f32;
 typedef double   f64;
 
-typedef struct drift_platform_t
+typedef struct button_state
+{
+    b32 is_down;
+    b32 held_down;
+    b32 was_down;
+} button_state_t;
+
+typedef enum keyboard
+{
+#define Key(name) KEY_##name,
+#include "drift_key_list.h"
+    KEY_MAX
+#undef Key
+} keyboard_t;
+
+typedef struct drift_platform
 {
     b32 running;
+    f32 current_time;
+    f32 last_time;
+    // TODO: delta_time
+
+    button_state_t keys[KEY_MAX];
 } drift_platform_t;
 
 #endif // DRIFT_H
