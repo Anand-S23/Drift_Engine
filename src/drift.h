@@ -32,7 +32,7 @@ typedef double   f64;
 
 typedef struct input_state
 {
-    b32 start_down;
+    b32 begin_down;
     b32 is_down;
     b32 was_down;
 } input_state_t;

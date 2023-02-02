@@ -6,11 +6,11 @@
 
 drift_platform_t global_platform = {0};
 
-static void reset_input_start_down(input_state_t *keys)
+static void reset_input_begin_down(input_state_t *keys)
 {
     for (int i = 0; i < (int)KEY_MAX; ++i)
     {
-        keys[i].start_down = 0;
+        keys[i].begin_down = 0;
     }
 }
     
@@ -74,7 +74,7 @@ static void handle_event(SDL_Event *event)
                 }
 
                 global_platform.keys[key_index].is_down = is_down;
-                global_platform.keys[key_index].start_down = is_down;
+                global_platform.keys[key_index].begin_down = is_down;
                 global_platform.keys[key_index].was_down = was_down;
             }
 
@@ -131,7 +131,7 @@ int main(void)
     {
         // TODO: Logging
         return 1;
-    }
+   }
 
     // Core loop
 
@@ -177,7 +177,7 @@ int main(void)
         SDL_Event event;
         while(SDL_PollEvent(&event))
         {
-            reset_input_start_down(&global_platform.keys);
+            reset_input_begin_down(&global_platform.keys);
             handle_event(&event);
         }
 
