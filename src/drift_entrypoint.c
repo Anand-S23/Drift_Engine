@@ -6,6 +6,14 @@
 
 drift_platform_t global_platform = {0};
 
+static void reset_input_start_down(input_state_t *keys)
+{
+    for (int i = 0; i < (int)KEY_MAX; ++i)
+    {
+        keys[i].start_down = 0;
+    }
+}
+    
 static void handle_event(SDL_Event *event)
 {
     switch (event->type)
@@ -25,7 +33,7 @@ static void handle_event(SDL_Event *event)
             b32 is_down = (key_state == SDL_PRESSED);
             b32 was_down = (key_state == SDL_RELEASED || key_repeat);
             u32 key_index = 0;
-            
+
             if (!key_repeat)
             {
                 // TODO: Check for key press
@@ -45,34 +53,31 @@ static void handle_event(SDL_Event *event)
                 {
                     switch (key_code)
                     {
-                        case SDLK_ESCAPE:     { key_index = KEY_esc; } break;
-                        case SDLK_BACKSPACE:  { key_index = KEY_backspace; } break;
-                        case SDLK_DELETE:     { key_index = KEY_delete; } break;
-                        case SDLK_TAB:        { key_index = KEY_tab; } break;
-                        case SDLK_SPACE:      { key_index = KEY_space; } break;
-                        case SDLK_RETURN:     { key_index = KEY_enter; } break;
-                        case SDLK_LCTRL:      { key_index = KEY_ctrl; } break;
-                        case SDLK_RCTRL:      { key_index = KEY_ctrl; } break;
-                        case SDLK_LSHIFT:     { key_index = KEY_shift; } break;
-                        case SDLK_RSHIFT:     { key_index = KEY_shift; } break;
-                        case SDLK_LALT:       { key_index = KEY_alt; } break;
-                        case SDLK_RALT:       { key_index = KEY_alt; } break;
-                        case SDLK_UP:         { key_index = KEY_up; } break;
-                        case SDLK_DOWN:       { key_index = KEY_down; } break;
-                        case SDLK_LEFT:       { key_index = KEY_left; } break;
-                        case SDLK_RIGHT:      { key_index = KEY_right; } break;
-
-                        default:
-                        {
-                            printf("Key code not supported: %d\n", key_code);
-                        } break;
+                        case SDLK_ESCAPE: { key_index = KEY_esc; } break;
+                        case SDLK_BACKSPACE: { key_index = KEY_backspace; } break;
+                        case SDLK_DELETE: { key_index = KEY_delete; } break;
+                        case SDLK_TAB: { key_index = KEY_tab; } break;
+                        case SDLK_SPACE: { key_index = KEY_space; } break;
+                        case SDLK_RETURN: { key_index = KEY_enter; } break;
+                        case SDLK_LCTRL: { key_index = KEY_ctrl; } break;
+                        case SDLK_RCTRL: { key_index = KEY_ctrl; } break;
+                        case SDLK_LSHIFT: { key_index = KEY_shift; } break;
+                        case SDLK_RSHIFT: { key_index = KEY_shift; } break;
+                        case SDLK_LALT: { key_index = KEY_alt; } break;
+                        case SDLK_RALT: { key_index = KEY_alt; } break;
+                        case SDLK_UP: { key_index = KEY_up; } break;
+                        case SDLK_DOWN: { key_index = KEY_down; } break;
+                        case SDLK_LEFT: { key_index = KEY_left; } break;
+                        case SDLK_RIGHT: { key_index = KEY_right; } break;
+                        default: { SDL_Log("Key not supported: %d", key_code); } break;
                     }
                 }
 
                 global_platform.keys[key_index].is_down = is_down;
-                global_platform.keys[key_index].held_down = is_down;
+                global_platform.keys[key_index].start_down = is_down;
                 global_platform.keys[key_index].was_down = was_down;
             }
+
 
             b32 alt_key_was_down = (event->key.keysym.mod & KMOD_ALT);
             if (key_code == SDLK_F4 && alt_key_was_down)
@@ -129,7 +134,36 @@ int main(void)
     }
 
     // Core loop
-    int moniter_refresh_hz = 60; // TODO: Dynamically get monitor refresh rate
+
+    /*
+    // TODO: Dynamically get monitor refrest rate
+    // TODO: Use get closet display mode based to screen width + height
+
+    static int display_in_use = 0;
+    int display_mode_count = SDL_GetNumDisplayModes(display_in_use);
+    if (display_mode_count < 1)
+    {
+        // TODO: Logging
+        return 1;
+    }
+
+    for (int i = 0; i < display_mode_count; ++i)
+    {
+        SDL_DisplayMode mode;
+        if (SDL_GetDisplayMode(display_in_use, i, &mode) != 0)
+        {
+            // TODO: Logging
+            return 1;
+        }
+
+        SDL_Log("Mode %i\tbpp %i\t%s\t%i x %i",
+                i, SDL_BITSPERPIXEL(mode.format),
+                SDL_GetPixelFormatName(mode.format),
+                mode.w, mode.h);
+        SDL_Log("%d", mode.refresh_rate);
+    }
+    */
+    int moniter_refresh_hz = 60;
     int game_update_hz = moniter_refresh_hz / 2;
     f32 target_fps = 1.0f / (f32)game_update_hz;
 
@@ -143,6 +177,7 @@ int main(void)
         SDL_Event event;
         while(SDL_PollEvent(&event))
         {
+            reset_input_start_down(&global_platform.keys);
             handle_event(&event);
         }
 

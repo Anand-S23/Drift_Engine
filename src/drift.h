@@ -30,12 +30,12 @@ typedef int64_t  b64;
 typedef float    f32;
 typedef double   f64;
 
-typedef struct button_state
+typedef struct input_state
 {
+    b32 start_down;
     b32 is_down;
-    b32 held_down;
     b32 was_down;
-} button_state_t;
+} input_state_t;
 
 typedef enum keyboard
 {
@@ -52,7 +52,7 @@ typedef struct drift_platform
     f32 last_time;
     // TODO: delta_time
 
-    button_state_t keys[KEY_MAX];
+    input_state_t keys[KEY_MAX];
 } drift_platform_t;
 
 #endif // DRIFT_H
