@@ -6,21 +6,67 @@
 
 drift_platform_t global_platform = {0};
 
-static void reset_input_begin_down(input_state_t *keys)
+static void drift_platform_reset_frame_based_input(drift_platform_t *platform)
 {
+    // Mouse wheel
+   platform->wheel_delta = 0;
+    
+    // Mouse
+    platform->left_mouse.begin_down = 0;
+    platform->left_mouse.was_down = 0;
+
+    platform->middle_mouse.begin_down = 0;
+    platform->middle_mouse.begin_down = 0;
+
+    platform->right_mouse.was_down = 0;
+    platform->right_mouse.was_down = 0;
+
+    // Keyboard
     for (int i = 0; i < (int)KEY_MAX; ++i)
     {
-        keys[i].begin_down = 0;
+        platform->keys[i].begin_down = 0;
+        platform->keys[i].was_down = 0;
     }
 }
     
-static void handle_event(SDL_Event *event)
+static void drift_platform_handle_event(drift_platform_t *platform, SDL_Event *event)
 {
     switch (event->type)
     {
         case SDL_QUIT:
         {
-            global_platform.running = 0;
+            platform->running = 0;
+        } break;
+
+        case SDL_MOUSEWHEEL:
+        {
+            platform->wheel_delta = event->wheel.y;
+        } break;
+
+        case SDL_MOUSEMOTION:
+        {
+            SDL_GetMouseState(&platform->mouse_x, &platform->mouse_y);
+        } break;
+
+        case SDL_MOUSEBUTTONDOWN:
+        case SDL_MOUSEBUTTONUP:
+        {
+            b32 is_down = (event->type == SDL_MOUSEBUTTONDOWN);
+            u8 button_index = event->button.button;
+
+            input_state_t *mouse[MOUSE_BUTTON_COUNT] = {
+                NULL,
+                &platform->left_mouse, // SDL_BUTTON_LEFT = 1
+                &platform->middle_mouse, // SDL_BUTTON_MIDDLE = 2
+                &platform->right_mouse // SDL_BUTTON_RIGHT = 3
+            };
+
+            if (button_index > 0 && button_index < MOUSE_BUTTON_COUNT)
+            {
+                mouse[button_index]->begin_down = is_down;
+                mouse[button_index]->is_down = is_down;
+                mouse[button_index]->was_down = !is_down; 
+            }
         } break;
 
         case SDL_KEYDOWN:
@@ -36,18 +82,17 @@ static void handle_event(SDL_Event *event)
 
             if (!key_repeat)
             {
-                // TODO: Check for key press
                 if (key_code >= SDLK_a && key_code <= SDLK_z)
                 {
-                    key_code = SDLK_a + (key_code - SDLK_a);
+                    key_index = KEY_a + (key_code - SDLK_a);
                 }
                 else if (key_code >= SDLK_0 && key_code <= SDLK_9)
                 {
-                    key_code = SDLK_0 + (key_code - SDLK_0);
+                    key_index = KEY_0 + (key_code - SDLK_0);
                 }
                 else if (key_code >= SDLK_F1 && key_code <= SDLK_F12)
                 {
-                    key_code = SDLK_F1 + (key_code - SDLK_F1);
+                    key_index = KEY_f1 + (key_code - SDLK_F1);
                 }
                 else
                 {
@@ -73,16 +118,15 @@ static void handle_event(SDL_Event *event)
                     }
                 }
 
-                global_platform.keys[key_index].is_down = is_down;
-                global_platform.keys[key_index].begin_down = is_down;
-                global_platform.keys[key_index].was_down = was_down;
+                platform->keys[key_index].is_down = is_down;
+                platform->keys[key_index].begin_down = is_down;
+                platform->keys[key_index].was_down = was_down;
             }
-
 
             b32 alt_key_was_down = (event->key.keysym.mod & KMOD_ALT);
             if (key_code == SDLK_F4 && alt_key_was_down)
             {
-                global_platform.running = 0;
+                platform->running = 0;
             }
         } break;
 
@@ -175,10 +219,10 @@ int main(void)
         global_platform.current_time += 1.f / target_fps;
 
         SDL_Event event;
+        drift_platform_reset_frame_based_input(&global_platform);
         while(SDL_PollEvent(&event))
         {
-            reset_input_begin_down(&global_platform.keys);
-            handle_event(&event);
+            drift_platform_handle_event(&global_platform, &event);
         }
 
         glClearColor(0.2, 0.3, 0.3, 1.0);
