@@ -6,6 +6,24 @@
 
 drift_platform_t global_platform = {0};
 
+static f32 drift_platform_get_elapsed_time(u64 previous_counter, u64 current_counter)
+{
+    f32 performance_freq = (f32)SDL_GetPerformanceFrequency();
+    return ((f32)(current_counter - previous_counter) / performance_freq);
+}
+
+static int drift_platform_get_window_refresh_rate(SDL_Window *window)
+{
+    int fallback_refresh_rate = 60;
+
+    SDL_DisplayMode mode;
+    int window_index = SDL_GetWindowDisplayIndex(window);
+    int display_mode_result = SDL_GetDesktopDisplayMode(window_index, &mode);
+    b32 is_result_valid = (display_mode_result == 0 && mode.refresh_rate > 0);
+
+    return is_result_valid ? mode.refresh_rate : fallback_refresh_rate;
+}
+
 static void drift_platform_reset_frame_based_input(drift_platform_t *platform)
 {
     // Mouse wheel
@@ -175,49 +193,24 @@ int main(void)
     {
         // TODO: Logging
         return 1;
-   }
+    }
 
     // Core loop
-
-    /*
-    // TODO: Dynamically get monitor refrest rate
-    // TODO: Use get closet display mode based to screen width + height
-
-    static int display_in_use = 0;
-    int display_mode_count = SDL_GetNumDisplayModes(display_in_use);
-    if (display_mode_count < 1)
-    {
-        // TODO: Logging
-        return 1;
-    }
-
-    for (int i = 0; i < display_mode_count; ++i)
-    {
-        SDL_DisplayMode mode;
-        if (SDL_GetDisplayMode(display_in_use, i, &mode) != 0)
-        {
-            // TODO: Logging
-            return 1;
-        }
-
-        SDL_Log("Mode %i\tbpp %i\t%s\t%i x %i",
-                i, SDL_BITSPERPIXEL(mode.format),
-                SDL_GetPixelFormatName(mode.format),
-                mode.w, mode.h);
-        SDL_Log("%d", mode.refresh_rate);
-    }
-    */
-    int moniter_refresh_hz = 60;
-    int game_update_hz = moniter_refresh_hz / 2;
+    int refresh_rate = drift_platform_get_window_refresh_rate(window);
+    int game_update_hz = refresh_rate / 2;
     f32 target_fps = 1.0f / (f32)game_update_hz;
+    u64 preformance_freq = SDL_GetPerformanceFrequency();
+    u64 previous_counter = SDL_GetPerformanceCounter();
+    u64 last_cycle_count = _rdtsc();
+    SDL_Log("%d - %lf", refresh_rate, target_fps);
+
+    global_platform.last_time = global_platform.current_time;
+    global_platform.current_time += 1.f / (f32)target_fps;
+    global_platform.delta_time = global_platform.current_time - global_platform.last_time;
 
     global_platform.running = 1;
     while (global_platform.running)
     {
-        u64 start_time = SDL_GetTicks();
-        global_platform.last_time = global_platform.current_time;
-        global_platform.current_time += 1.f / target_fps;
-
         SDL_Event event;
         drift_platform_reset_frame_based_input(&global_platform);
         while(SDL_PollEvent(&event))
@@ -227,7 +220,42 @@ int main(void)
 
         glClearColor(0.2, 0.3, 0.3, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
+        // TODO: Update App
         SDL_GL_SwapWindow(window); 
+
+        // Update Time
+        u64 current_counter = SDL_GetPerformanceCounter();
+        f32 elapsed_time = drift_platform_get_elapsed_time(previous_counter, current_counter);
+        if (elapsed_time < target_fps)
+        {
+            int time_should_sleep = ((target_fps - elapsed_time) * 1000) - 1;
+            if (time_should_sleep > 0)
+            {
+                SDL_Delay(time_should_sleep);
+            }
+        }
+
+        u64 end_counter = SDL_GetPerformanceCounter();
+        u64 end_cycle_count = _rdtsc();
+
+        u64 counter_elapsed = end_counter - previous_counter;
+        u64 cycles_elapsed = end_cycle_count - last_cycle_count;
+
+        i32 ms_per_frame = (i32)((1000 * counter_elapsed) / preformance_freq);
+        i32 fps = (i32)(preformance_freq / counter_elapsed);
+        i32 mcpf = (i32)(cycles_elapsed / (1000 * 1000));
+
+        global_platform.last_time = global_platform.current_time;
+        global_platform.current_time += 1.f / (f32)fps;
+        global_platform.delta_time = global_platform.current_time - global_platform.last_time;
+
+        previous_counter = end_counter;
+        last_cycle_count = end_cycle_count;
+
+#if 1
+        SDL_Log("%dms/f, %dfps, %dmc/f %lfs",
+                ms_per_frame, fps, mcpf, global_platform.delta_time);
+#endif
     }
 
     return 0;
