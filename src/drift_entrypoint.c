@@ -202,7 +202,6 @@ int main(void)
     u64 preformance_freq = SDL_GetPerformanceFrequency();
     u64 previous_counter = SDL_GetPerformanceCounter();
     u64 last_cycle_count = _rdtsc();
-    SDL_Log("%d - %lf", refresh_rate, target_fps);
 
     global_platform.last_time = global_platform.current_time;
     global_platform.current_time += 1.f / (f32)target_fps;
