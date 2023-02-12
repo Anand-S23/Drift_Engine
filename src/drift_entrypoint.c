@@ -4,6 +4,14 @@
 
 #include "drift.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+    #include "win32_drift.c"
+#elif defined(__LINUX__)
+    #include "linux_drift.c"
+#elif defined(__APPLE__)
+    // TODO: Support apple
+#endif
+
 drift_platform_t global_platform = {0};
 
 static f32 drift_platform_get_elapsed_time(u64 previous_counter, u64 current_counter)
