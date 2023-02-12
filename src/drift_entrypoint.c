@@ -4,6 +4,14 @@
 
 #include "drift.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+    #include "win32_drift.c"
+#elif defined(__LINUX__)
+    #include "linux_drift.c"
+#elif defined(__APPLE__)
+    // TODO: Support apple
+#endif
+
 drift_platform_t global_platform = {0};
 
 static f32 drift_platform_get_elapsed_time(u64 previous_counter, u64 current_counter)
@@ -202,7 +210,6 @@ int main(void)
     u64 preformance_freq = SDL_GetPerformanceFrequency();
     u64 previous_counter = SDL_GetPerformanceCounter();
     u64 last_cycle_count = _rdtsc();
-    SDL_Log("%d - %lf", refresh_rate, target_fps);
 
     global_platform.last_time = global_platform.current_time;
     global_platform.current_time += 1.f / (f32)target_fps;

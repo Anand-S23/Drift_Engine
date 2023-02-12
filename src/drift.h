@@ -30,6 +30,12 @@ typedef int64_t  b64;
 typedef float    f32;
 typedef double   f64;
 
+typedef struct read_file_result
+{
+    u32 size;
+    void *memory;
+} read_file_result_t;
+
 #define MOUSE_BUTTON_COUNT 4
 
 enum
