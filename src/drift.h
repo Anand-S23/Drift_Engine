@@ -1,12 +1,7 @@
 #ifndef DRIFT_H
 #define DRIFT_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
 #include <stdint.h>
-#include <assert.h>
 
 // Signed Integers
 typedef int8_t   i8;
@@ -109,5 +104,32 @@ typedef struct drift_platform
     controller_input_t controller;
     controller_input_t controllers[4];
 } drift_platform_t;
+
+typedef struct drift_app
+{
+    const char *name;
+    int window_width;
+    int window_height;
+} drift_app_t;
+
+#if defined(_MSC_VER)
+    #define DRIFT_APP_ENTRY_POINT __declspec(dllexport)
+#elif defined(__GNUC__)
+    #define DRIFT_APP_ENTRY_POINT __attribute__((visibility("default")))
+#else
+    #define DRIFT_APP_ENTRY_POINT
+#endif
+
+typedef void init_app_t(drift_platform_t *platform);
+typedef void update_app_t(drift_platform_t *platform);
+typedef drift_app_t drift_main_t(void);
+
+void init_app_stub(drift_platform_t *platform){}
+void update_app_stub(drift_platform_t *platform){}
+drift_app_t drift_main_stub(void)
+{
+    drift_app_t app = {0};
+    return app;
+}
 
 #endif // DRIFT_H
