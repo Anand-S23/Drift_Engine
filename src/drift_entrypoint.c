@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include <SDL2/SDL_opengl.h>
+#include <string.h>
 
 #include "drift.h"
 
@@ -167,13 +168,28 @@ int main(void)
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC);
 
     // Create window
-    // TODO: Get values from app, instead of hard coding
+    drift_app_t drift_app;
+    char *dll_path = drift_platform_get_dll_path();
+    platform_app_code_t app_code = drift_platform_load_app_code(dll_path);
+    if (app_code.is_valid)
+    {
+        drift_app = app_code.drift_main();
+    }
+    else
+    {
+        // TODO: Load defaults
+        SDL_Log("TODO: Load Defaults");
+    }
+
+    // TODO: Add more fields into drift_app_t
     u32 window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
-    SDL_Window *window = SDL_CreateWindow("Drift",
+    SDL_Window *window = SDL_CreateWindow(drift_app.name,
                                           SDL_WINDOWPOS_UNDEFINED,
                                           SDL_WINDOWPOS_UNDEFINED,
-                                          640, 480,
+                                          drift_app.window_width,
+                                          drift_app.window_height,
                                           window_flags);
+
     if (window == NULL)
     {
         // TODO: Logging
@@ -265,5 +281,6 @@ int main(void)
 #endif
     }
 
+    free(dll_path);
     return 0;
 }

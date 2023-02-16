@@ -7,7 +7,7 @@ cd build
 
 CC=gcc
 CFLAGS="-Wall -Wextra -Wno-address -std=c11 -ggdb"
-LIBS="-lGL -lSDL2 -lm -I../third_party"
+LIBS="-lGL -lSDL2 -lm -ldl -I../third_party"
 ENGINE="-I../src"
 
 name=app
