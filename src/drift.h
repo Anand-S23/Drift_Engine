@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define UNUSED(x) (void)(x)
+
 // Signed Integers
 typedef int8_t   i8;
 typedef int16_t  i16;
@@ -85,6 +87,7 @@ typedef struct controller_input
 typedef struct drift_platform
 {
     b32 running;
+    b32 initialized;
 
     // Time
     f32 current_time;
@@ -124,8 +127,16 @@ typedef void init_app_t(drift_platform_t *platform);
 typedef void update_app_t(drift_platform_t *platform);
 typedef drift_app_t drift_main_t(void);
 
-void init_app_stub(drift_platform_t *platform){}
-void update_app_stub(drift_platform_t *platform){}
+void init_app_stub(drift_platform_t *platform)
+{
+    platform->initialized = 0;
+}
+
+void update_app_stub(drift_platform_t *platform)
+{
+    platform->initialized = 0;
+}
+
 drift_app_t drift_main_stub(void)
 {
     drift_app_t app = {0};

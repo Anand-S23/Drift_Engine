@@ -15,6 +15,13 @@
 
 drift_platform_t global_platform = {0};
 
+static void drift_platform_load_app_defaults(drift_app_t *drift_app)
+{
+    drift_app->name = "Drift App";
+    drift_app->window_width = 640;
+    drift_app->window_height = 480;
+}
+
 static f32 drift_platform_get_elapsed_time(u64 previous_counter, u64 current_counter)
 {
     f32 performance_freq = (f32)SDL_GetPerformanceFrequency();
@@ -177,8 +184,7 @@ int main(void)
     }
     else
     {
-        // TODO: Load defaults
-        SDL_Log("TODO: Load Defaults");
+        drift_platform_load_app_defaults(&drift_app);
     }
 
     // TODO: Add more fields into drift_app_t
@@ -232,6 +238,7 @@ int main(void)
     global_platform.delta_time = global_platform.current_time - global_platform.last_time;
 
     global_platform.running = 1;
+    app_code.init(&global_platform);
     while (global_platform.running)
     {
         SDL_Event event;
@@ -243,7 +250,9 @@ int main(void)
 
         glClearColor(0.2, 0.3, 0.3, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
-        // TODO: Update App
+
+        app_code.update(&global_platform);
+
         SDL_GL_SwapWindow(window); 
 
         // Update Time
@@ -275,12 +284,13 @@ int main(void)
         previous_counter = end_counter;
         last_cycle_count = end_cycle_count;
 
-#if 1
-        SDL_Log("%dms/f, %dfps, %dmc/f %lfs",
-                ms_per_frame, fps, mcpf, global_platform.delta_time);
-#endif
+        UNUSED(ms_per_frame);
+        UNUSED(fps);
+        UNUSED(mcpf);
+        // SDL_Log("%dms/f, %dfps, %dmc/f %lfs", ms_per_frame, fps, mcpf, global_platform.delta_time);
     }
 
     free(dll_path);
+    drift_platform_unload_app_code(&app_code);
     return 0;
 }

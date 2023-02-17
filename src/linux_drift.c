@@ -18,15 +18,12 @@ typedef struct platform_app_code
     b32 is_valid;
 } platform_app_code_t;
 
-typedef struct {
-    const char *dli_fname;  /* Pathname of shared object that
-                               contains address */
-    void       *dli_fbase;  /* Address at which shared object
-                               is loaded */
-    const char *dli_sname;  /* Name of nearest symbol with address
-                               lower than addr */
-    void       *dli_saddr;  /* Exact address of symbol named
-                               in dli_sname */
+typedef struct
+{
+    const char *dli_fname;
+    void *dli_fbase;
+    const char *dli_sname;
+    void *dli_saddr;
 } Dl_info;
 
 static char *drift_platform_get_dll_path(void)
