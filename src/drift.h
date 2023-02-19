@@ -45,23 +45,21 @@ enum
 
 enum
 {
-#define Button(name) BUTTON_##name,
-    Button(up)
-    Button(down)
-    Button(left)
-    Button(right)
-    Button(start)
-    Button(back)
-    Button(left_thumb_stick)
-    Button(right_thumb_stick)
-    Button(left_shoulder)
-    Button(right_shoulder)
-    Button(a)
-    Button(b)
-    Button(x)
-    Button(y)
+    BUTTON_up,
+    BUTTON_down,
+    BUTTON_left,
+    BUTTON_right,
+    BUTTON_start,
+    BUTTON_back,
+    BUTTON_left_thumb_stick,
+    BUTTON_right_thumb_stick,
+    BUTTON_left_shoulder,
+    BUTTON_right_shoulder,
+    BUTTON_a,
+    BUTTON_b,
+    BUTTON_x,
+    BUTTON_y,
     BUTTON_MAX
-#undef Button
 };
 
 typedef struct input_state
@@ -93,6 +91,11 @@ typedef struct drift_platform
     f32 current_time;
     f32 last_time;
     f32 delta_time;
+
+    // TODO: Maybe not needed by the app
+    i32 ms_per_frame;
+    i32 fps;
+    i32 mcpf;
 
     // Input
     i16 wheel_delta;

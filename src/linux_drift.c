@@ -7,24 +7,7 @@
 #define _GNU_SOURCE
 #include <dlfcn.h>
 
-#include "drift_platform.h"
-
-typedef struct platform_app_code
-{
-    init_app_t *init;
-    update_app_t *update;
-    drift_main_t *drift_main;
-    void *dll;
-    b32 is_valid;
-} platform_app_code_t;
-
-typedef struct
-{
-    const char *dli_fname;
-    void *dli_fbase;
-    const char *dli_sname;
-    void *dli_saddr;
-} Dl_info;
+#include "linux_drift.h"
 
 static char *drift_platform_get_dll_path(void)
 {

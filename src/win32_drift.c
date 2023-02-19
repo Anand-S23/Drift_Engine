@@ -1,15 +1,6 @@
 #include <windows.h>
 
-#include "drift_platform.h"
-
-typedef struct platform_app_code
-{
-    init_app_t *init;
-    update_app_t *update;
-    drift_main_t *drift_main;
-    HMODULE dll;
-    b32 is_valid;
-} platform_app_code_t;
+#include "win32_drift.h"
 
 static char *drift_platform_get_dll_path(void)
 {

@@ -15,20 +15,20 @@
 
 drift_platform_t global_platform = {0};
 
-static void drift_platform_load_app_defaults(drift_app_t *drift_app)
+static void drift_load_app_defaults(drift_app_t *drift_app)
 {
     drift_app->name = "Drift App";
     drift_app->window_width = 640;
     drift_app->window_height = 480;
 }
 
-static f32 drift_platform_get_elapsed_time(u64 previous_counter, u64 current_counter)
+static f32 drift_get_elapsed_time(u64 previous_counter, u64 current_counter)
 {
     f32 performance_freq = (f32)SDL_GetPerformanceFrequency();
     return ((f32)(current_counter - previous_counter) / performance_freq);
 }
 
-static int drift_platform_get_window_refresh_rate(SDL_Window *window)
+static int drift_get_window_refresh_rate(SDL_Window *window)
 {
     int fallback_refresh_rate = 60;
 
@@ -40,7 +40,7 @@ static int drift_platform_get_window_refresh_rate(SDL_Window *window)
     return is_result_valid ? mode.refresh_rate : fallback_refresh_rate;
 }
 
-static void drift_platform_reset_frame_based_input(drift_platform_t *platform)
+static void drift_reset_frame_based_input(drift_platform_t *platform)
 {
     // Mouse wheel
    platform->wheel_delta = 0;
@@ -63,7 +63,7 @@ static void drift_platform_reset_frame_based_input(drift_platform_t *platform)
     }
 }
     
-static void drift_platform_handle_event(drift_platform_t *platform, SDL_Event *event)
+static void drift_handle_event(drift_platform_t *platform, SDL_Event *event)
 {
     switch (event->type)
     {
@@ -184,7 +184,7 @@ int main(void)
     }
     else
     {
-        drift_platform_load_app_defaults(&drift_app);
+        drift_load_app_defaults(&drift_app);
     }
 
     // TODO: Add more fields into drift_app_t
@@ -207,6 +207,7 @@ int main(void)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+                                                                                       
 
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major);
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor);
@@ -226,7 +227,7 @@ int main(void)
     }
 
     // Core loop
-    int refresh_rate = drift_platform_get_window_refresh_rate(window);
+    int refresh_rate = drift_get_window_refresh_rate(window);
     int game_update_hz = refresh_rate / 2;
     f32 target_fps = 1.0f / (f32)game_update_hz;
     u64 preformance_freq = SDL_GetPerformanceFrequency();
@@ -242,10 +243,10 @@ int main(void)
     while (global_platform.running)
     {
         SDL_Event event;
-        drift_platform_reset_frame_based_input(&global_platform);
+        drift_reset_frame_based_input(&global_platform);
         while(SDL_PollEvent(&event))
         {
-            drift_platform_handle_event(&global_platform, &event);
+            drift_handle_event(&global_platform, &event);
         }
 
         glClearColor(0.2, 0.3, 0.3, 1.0);
@@ -257,7 +258,7 @@ int main(void)
 
         // Update Time
         u64 current_counter = SDL_GetPerformanceCounter();
-        f32 elapsed_time = drift_platform_get_elapsed_time(previous_counter, current_counter);
+        f32 elapsed_time = drift_get_elapsed_time(previous_counter, current_counter);
         if (elapsed_time < target_fps)
         {
             int time_should_sleep = ((target_fps - elapsed_time) * 1000) - 1;
@@ -277,17 +278,17 @@ int main(void)
         i32 fps = (i32)(preformance_freq / counter_elapsed);
         i32 mcpf = (i32)(cycles_elapsed / (1000 * 1000));
 
+        // TODO: might not be needed in platform
+        global_platform.ms_per_frame = ms_per_frame;
+        global_platform.fps = fps;
+        global_platform.mcpf = mcpf;
+
         global_platform.last_time = global_platform.current_time;
         global_platform.current_time += 1.f / (f32)fps;
         global_platform.delta_time = global_platform.current_time - global_platform.last_time;
 
         previous_counter = end_counter;
         last_cycle_count = end_cycle_count;
-
-        UNUSED(ms_per_frame);
-        UNUSED(fps);
-        UNUSED(mcpf);
-        // SDL_Log("%dms/f, %dfps, %dmc/f %lfs", ms_per_frame, fps, mcpf, global_platform.delta_time);
     }
 
     free(dll_path);

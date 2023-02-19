@@ -10,8 +10,11 @@ DRIFT_APP_ENTRY_POINT void init_app(drift_platform_t *platform)
 
 DRIFT_APP_ENTRY_POINT void update_app(drift_platform_t *platform)
 {
-    f32 dt = platform->delta_time;
-    printf("Delta Time: %lf, FPS: %lf\n", dt, 1/dt);
+    printf("%dms/f, %dfps, %dmc/f %lfs\n",
+           platform->ms_per_frame,
+           platform->fps,
+           platform->mcpf,
+           platform->delta_time);
 }
 
 DRIFT_APP_ENTRY_POINT drift_app_t drift_main(void)
