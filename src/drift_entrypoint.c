@@ -208,10 +208,9 @@ int main(void)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
                                                                                        
-
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major);
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor);
-    printf("GL version %d.%d\n", major, minor);
+    SDL_Log("GL version %d.%d", major, minor);
 
     if (SDL_GL_CreateContext(window) == NULL)
     {
@@ -227,16 +226,23 @@ int main(void)
     }
 
     // Core loop
+    
+
+    global_platform.drift_free_file_memory = drift_platform_free_file_memory;
+    global_platform.drift_read_file = drift_platform_read_file;
+    global_platform.drift_write_file = drift_platform_write_file;
+
     int refresh_rate = drift_get_window_refresh_rate(window);
     int game_update_hz = refresh_rate / 2;
-    f32 target_fps = 1.0f / (f32)game_update_hz;
+    f32 target_spf = 1.0f / (f32)game_update_hz;
     u64 preformance_freq = SDL_GetPerformanceFrequency();
     u64 previous_counter = SDL_GetPerformanceCounter();
     u64 last_cycle_count = _rdtsc();
 
     global_platform.last_time = global_platform.current_time;
-    global_platform.current_time += 1.f / (f32)target_fps;
+    global_platform.current_time += (f32)target_spf;
     global_platform.delta_time = global_platform.current_time - global_platform.last_time;
+
 
     global_platform.running = 1;
     app_code.init(&global_platform);
@@ -259,13 +265,34 @@ int main(void)
         // Update Time
         u64 current_counter = SDL_GetPerformanceCounter();
         f32 elapsed_time = drift_get_elapsed_time(previous_counter, current_counter);
-        if (elapsed_time < target_fps)
+        if (elapsed_time < target_spf)
         {
-            int time_should_sleep = ((target_fps - elapsed_time) * 1000) - 1;
+            int time_should_sleep = ((target_spf - elapsed_time) * 1000) - 1;
             if (time_should_sleep > 0)
             {
                 SDL_Delay(time_should_sleep);
             }
+
+            u64 updated_counter = SDL_GetPerformanceCounter();
+            f32 frame_elapsed_time = drift_get_elapsed_time(previous_counter,
+                                                            updated_counter);
+            if(frame_elapsed_time < target_spf)
+            {
+                // TODO: Logging
+                // TODO: Missed sleep
+            }
+
+            while(frame_elapsed_time < target_spf)
+            {
+                updated_counter = SDL_GetPerformanceCounter();
+                frame_elapsed_time = drift_get_elapsed_time(previous_counter,
+                                                            updated_counter);
+            }
+        }
+        else
+        {
+            // TODO: Logging
+            // TODO: Missed Frame
         }
 
         u64 end_counter = SDL_GetPerformanceCounter();

@@ -84,7 +84,15 @@ typedef struct controller_input
 
 typedef struct drift_platform
 {
+    // Options
     b32 running;
+
+    // App Memory
+    void *permanent_storage;
+    u64 permanent_storage_size; 
+    void *temp_storage; 
+    u32 temp_storage_size;
+
     b32 initialized;
 
     // Time
@@ -109,6 +117,11 @@ typedef struct drift_platform
 
     controller_input_t controller;
     controller_input_t controllers[4];
+
+    // Functions
+    void (*drift_free_file_memory)(void *memory);
+    read_file_result_t (*drift_read_file)(const char *filename);
+    b32 (*drift_write_file)(const char *filename, u32 memory_size, void *memory);
 } drift_platform_t;
 
 typedef struct drift_app
