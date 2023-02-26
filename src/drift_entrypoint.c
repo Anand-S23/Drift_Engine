@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "drift.h"
+#include "drift_math.h"
 
 #if defined(_WIN32) || defined(_WIN64)
     #include "win32_drift.c"
@@ -225,8 +226,14 @@ int main(void)
         return 1;
     }
 
-    // Core loop
-    
+    // Initalize Global Platform
+    global_platform.permanent_storage_size = Megabytes(64); 
+    global_platform.permanent_storage = drift_platform_allocate_memory(
+        global_platform.permanent_storage_size);
+
+    global_platform.temp_storage_size = Megabytes(100);
+    global_platform.temp_storage = drift_platform_allocate_memory(
+        global_platform.temp_storage_size);
 
     global_platform.drift_free_file_memory = drift_platform_free_file_memory;
     global_platform.drift_read_file = drift_platform_read_file;
@@ -243,7 +250,7 @@ int main(void)
     global_platform.current_time += (f32)target_spf;
     global_platform.delta_time = global_platform.current_time - global_platform.last_time;
 
-
+    // Core loop
     global_platform.running = 1;
     app_code.init(&global_platform);
     while (global_platform.running)
@@ -319,6 +326,8 @@ int main(void)
     }
 
     free(dll_path);
+    drift_platform_free_memory(global_platform.permanent_storage,
+                               global_platform.permanent_storage_size);
     drift_platform_unload_app_code(&app_code);
     return 0;
 }

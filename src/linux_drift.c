@@ -9,6 +9,22 @@
 
 #include "linux_drift.h"
 
+static void *drift_platform_allocate_memory(u64 size)
+{
+    void *memory = mmap(0, size, PROT_READ | PROT_WRITE,
+                        MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+
+    return memory;
+}
+
+static void drift_platform_free_memory(void *memory, u64 size)
+{
+    if (memory)
+    {
+        munmap(memory, size);
+    }
+}
+
 static char *drift_platform_get_dll_path(void)
 {
     Dl_info info;

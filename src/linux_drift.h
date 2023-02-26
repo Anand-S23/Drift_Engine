@@ -18,6 +18,10 @@ typedef struct
     void *dli_saddr;
 } Dl_info;
 
+// Memory
+static void *drift_platform_allocate_memory(u64 size);
+static void drift_platform_free_memory(void *memory, u64 size);
+
 // App Code
 static char *drift_platform_get_dll_path(void);
 static void drift_platform_unload_app_code(platform_app_code_t *app_code);
