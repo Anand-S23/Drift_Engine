@@ -1,12 +1,9 @@
 #ifndef DRIFT_H
 #define DRIFT_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
 #include <stdint.h>
-#include <assert.h>
+
+#define UNUSED(x) (void)(x)
 
 // Signed Integers
 typedef int8_t   i8;
@@ -48,23 +45,21 @@ enum
 
 enum
 {
-#define Button(name) BUTTON_##name,
-    Button(up)
-    Button(down)
-    Button(left)
-    Button(right)
-    Button(start)
-    Button(back)
-    Button(left_thumb_stick)
-    Button(right_thumb_stick)
-    Button(left_shoulder)
-    Button(right_shoulder)
-    Button(a)
-    Button(b)
-    Button(x)
-    Button(y)
+    BUTTON_up,
+    BUTTON_down,
+    BUTTON_left,
+    BUTTON_right,
+    BUTTON_start,
+    BUTTON_back,
+    BUTTON_left_thumb_stick,
+    BUTTON_right_thumb_stick,
+    BUTTON_left_shoulder,
+    BUTTON_right_shoulder,
+    BUTTON_a,
+    BUTTON_b,
+    BUTTON_x,
+    BUTTON_y,
     BUTTON_MAX
-#undef Button
 };
 
 typedef struct input_state
@@ -89,12 +84,26 @@ typedef struct controller_input
 
 typedef struct drift_platform
 {
+    // Options
     b32 running;
+
+    // App Memory
+    void *permanent_storage;
+    u64 permanent_storage_size; 
+    void *temp_storage; 
+    u32 temp_storage_size;
+
+    b32 initialized;
 
     // Time
     f32 current_time;
     f32 last_time;
     f32 delta_time;
+
+    // TODO: Maybe not needed by the app
+    i32 ms_per_frame;
+    i32 fps;
+    i32 mcpf;
 
     // Input
     i16 wheel_delta;
@@ -108,6 +117,46 @@ typedef struct drift_platform
 
     controller_input_t controller;
     controller_input_t controllers[4];
+
+    // Functions
+    void (*drift_free_file_memory)(void *memory);
+    read_file_result_t (*drift_read_file)(const char *filename);
+    b32 (*drift_write_file)(const char *filename, u32 memory_size, void *memory);
 } drift_platform_t;
+
+typedef struct drift_app
+{
+    const char *name;
+    int window_width;
+    int window_height;
+} drift_app_t;
+
+#if defined(_MSC_VER)
+    #define DRIFT_APP_ENTRY_POINT __declspec(dllexport)
+#elif defined(__GNUC__)
+    #define DRIFT_APP_ENTRY_POINT __attribute__((visibility("default")))
+#else
+    #define DRIFT_APP_ENTRY_POINT
+#endif
+
+typedef void init_app_t(drift_platform_t *platform);
+typedef void update_app_t(drift_platform_t *platform);
+typedef drift_app_t drift_main_t(void);
+
+void init_app_stub(drift_platform_t *platform)
+{
+    platform->initialized = 0;
+}
+
+void update_app_stub(drift_platform_t *platform)
+{
+    platform->initialized = 0;
+}
+
+drift_app_t drift_main_stub(void)
+{
+    drift_app_t app = {0};
+    return app;
+}
 
 #endif // DRIFT_H

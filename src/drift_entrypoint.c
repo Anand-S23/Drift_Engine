@@ -1,8 +1,10 @@
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include <SDL2/SDL_opengl.h>
+#include <string.h>
 
 #include "drift.h"
+#include "drift_math.h"
 
 #if defined(_WIN32) || defined(_WIN64)
     #include "win32_drift.c"
@@ -14,13 +16,20 @@
 
 drift_platform_t global_platform = {0};
 
-static f32 drift_platform_get_elapsed_time(u64 previous_counter, u64 current_counter)
+static void drift_load_app_defaults(drift_app_t *drift_app)
+{
+    drift_app->name = "Drift App";
+    drift_app->window_width = 640;
+    drift_app->window_height = 480;
+}
+
+static f32 drift_get_elapsed_time(u64 previous_counter, u64 current_counter)
 {
     f32 performance_freq = (f32)SDL_GetPerformanceFrequency();
     return ((f32)(current_counter - previous_counter) / performance_freq);
 }
 
-static int drift_platform_get_window_refresh_rate(SDL_Window *window)
+static int drift_get_window_refresh_rate(SDL_Window *window)
 {
     int fallback_refresh_rate = 60;
 
@@ -32,7 +41,7 @@ static int drift_platform_get_window_refresh_rate(SDL_Window *window)
     return is_result_valid ? mode.refresh_rate : fallback_refresh_rate;
 }
 
-static void drift_platform_reset_frame_based_input(drift_platform_t *platform)
+static void drift_reset_frame_based_input(drift_platform_t *platform)
 {
     // Mouse wheel
    platform->wheel_delta = 0;
@@ -55,7 +64,7 @@ static void drift_platform_reset_frame_based_input(drift_platform_t *platform)
     }
 }
     
-static void drift_platform_handle_event(drift_platform_t *platform, SDL_Event *event)
+static void drift_handle_event(drift_platform_t *platform, SDL_Event *event)
 {
     switch (event->type)
     {
@@ -167,13 +176,27 @@ int main(void)
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC);
 
     // Create window
-    // TODO: Get values from app, instead of hard coding
+    drift_app_t drift_app;
+    char *dll_path = drift_platform_get_dll_path();
+    platform_app_code_t app_code = drift_platform_load_app_code(dll_path);
+    if (app_code.is_valid)
+    {
+        drift_app = app_code.drift_main();
+    }
+    else
+    {
+        drift_load_app_defaults(&drift_app);
+    }
+
+    // TODO: Add more fields into drift_app_t
     u32 window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
-    SDL_Window *window = SDL_CreateWindow("Drift",
+    SDL_Window *window = SDL_CreateWindow(drift_app.name,
                                           SDL_WINDOWPOS_UNDEFINED,
                                           SDL_WINDOWPOS_UNDEFINED,
-                                          640, 480,
+                                          drift_app.window_width,
+                                          drift_app.window_height,
                                           window_flags);
+
     if (window == NULL)
     {
         // TODO: Logging
@@ -185,10 +208,10 @@ int main(void)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
+                                                                                       
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major);
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor);
-    printf("GL version %d.%d\n", major, minor);
+    SDL_Log("GL version %d.%d", major, minor);
 
     if (SDL_GL_CreateContext(window) == NULL)
     {
@@ -203,43 +226,80 @@ int main(void)
         return 1;
     }
 
-    // Core loop
-    int refresh_rate = drift_platform_get_window_refresh_rate(window);
+    // Initalize Global Platform
+    global_platform.permanent_storage_size = Megabytes(64); 
+    global_platform.permanent_storage = drift_platform_allocate_memory(
+        global_platform.permanent_storage_size);
+
+    global_platform.temp_storage_size = Megabytes(100);
+    global_platform.temp_storage = drift_platform_allocate_memory(
+        global_platform.temp_storage_size);
+
+    global_platform.drift_free_file_memory = drift_platform_free_file_memory;
+    global_platform.drift_read_file = drift_platform_read_file;
+    global_platform.drift_write_file = drift_platform_write_file;
+
+    int refresh_rate = drift_get_window_refresh_rate(window);
     int game_update_hz = refresh_rate / 2;
-    f32 target_fps = 1.0f / (f32)game_update_hz;
+    f32 target_spf = 1.0f / (f32)game_update_hz;
     u64 preformance_freq = SDL_GetPerformanceFrequency();
     u64 previous_counter = SDL_GetPerformanceCounter();
     u64 last_cycle_count = _rdtsc();
 
     global_platform.last_time = global_platform.current_time;
-    global_platform.current_time += 1.f / (f32)target_fps;
+    global_platform.current_time += (f32)target_spf;
     global_platform.delta_time = global_platform.current_time - global_platform.last_time;
 
+    // Core loop
     global_platform.running = 1;
+    app_code.init(&global_platform);
     while (global_platform.running)
     {
         SDL_Event event;
-        drift_platform_reset_frame_based_input(&global_platform);
+        drift_reset_frame_based_input(&global_platform);
         while(SDL_PollEvent(&event))
         {
-            drift_platform_handle_event(&global_platform, &event);
+            drift_handle_event(&global_platform, &event);
         }
 
         glClearColor(0.2, 0.3, 0.3, 1.0);
         glClear(GL_COLOR_BUFFER_BIT);
-        // TODO: Update App
+
+        app_code.update(&global_platform);
+
         SDL_GL_SwapWindow(window); 
 
         // Update Time
         u64 current_counter = SDL_GetPerformanceCounter();
-        f32 elapsed_time = drift_platform_get_elapsed_time(previous_counter, current_counter);
-        if (elapsed_time < target_fps)
+        f32 elapsed_time = drift_get_elapsed_time(previous_counter, current_counter);
+        if (elapsed_time < target_spf)
         {
-            int time_should_sleep = ((target_fps - elapsed_time) * 1000) - 1;
+            int time_should_sleep = ((target_spf - elapsed_time) * 1000) - 1;
             if (time_should_sleep > 0)
             {
                 SDL_Delay(time_should_sleep);
             }
+
+            u64 updated_counter = SDL_GetPerformanceCounter();
+            f32 frame_elapsed_time = drift_get_elapsed_time(previous_counter,
+                                                            updated_counter);
+            if(frame_elapsed_time < target_spf)
+            {
+                // TODO: Logging
+                // TODO: Missed sleep
+            }
+
+            while(frame_elapsed_time < target_spf)
+            {
+                updated_counter = SDL_GetPerformanceCounter();
+                frame_elapsed_time = drift_get_elapsed_time(previous_counter,
+                                                            updated_counter);
+            }
+        }
+        else
+        {
+            // TODO: Logging
+            // TODO: Missed Frame
         }
 
         u64 end_counter = SDL_GetPerformanceCounter();
@@ -252,18 +312,22 @@ int main(void)
         i32 fps = (i32)(preformance_freq / counter_elapsed);
         i32 mcpf = (i32)(cycles_elapsed / (1000 * 1000));
 
+        // TODO: might not be needed in platform
+        global_platform.ms_per_frame = ms_per_frame;
+        global_platform.fps = fps;
+        global_platform.mcpf = mcpf;
+
         global_platform.last_time = global_platform.current_time;
         global_platform.current_time += 1.f / (f32)fps;
         global_platform.delta_time = global_platform.current_time - global_platform.last_time;
 
         previous_counter = end_counter;
         last_cycle_count = end_cycle_count;
-
-#if 1
-        SDL_Log("%dms/f, %dfps, %dmc/f %lfs",
-                ms_per_frame, fps, mcpf, global_platform.delta_time);
-#endif
     }
 
+    free(dll_path);
+    drift_platform_free_memory(global_platform.permanent_storage,
+                               global_platform.permanent_storage_size);
+    drift_platform_unload_app_code(&app_code);
     return 0;
 }

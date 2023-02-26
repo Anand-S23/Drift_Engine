@@ -4,8 +4,98 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <x86intrin.h>
+#define _GNU_SOURCE
+#include <dlfcn.h>
 
-#include "drift_platform.h"
+#include "linux_drift.h"
+
+static void *drift_platform_allocate_memory(u64 size)
+{
+    void *memory = mmap(0, size, PROT_READ | PROT_WRITE,
+                        MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+
+    return memory;
+}
+
+static void drift_platform_free_memory(void *memory, u64 size)
+{
+    if (memory)
+    {
+        munmap(memory, size);
+    }
+}
+
+static char *drift_platform_get_dll_path(void)
+{
+    Dl_info info;
+    dladdr(drift_platform_get_dll_path, &info);
+
+    int exe_dir_size = strlen(info.dli_fname);
+    char *exe_dir = (char *)malloc(sizeof(char) * exe_dir_size);
+    memcpy(exe_dir, info.dli_fname, exe_dir_size);
+
+    int last_slash_pos = 0;
+    for (int i = 0; exe_dir[i]; ++i)
+    {
+        if (exe_dir[i] == '/')
+        {
+            last_slash_pos = i;
+        }
+    }
+
+    const char *dll_name = "drift_app.dll";
+    int dll_name_size = strlen(dll_name);
+
+    int dll_path_size = last_slash_pos + dll_name_size + 1;
+    char *dll_path = (char *)malloc(sizeof(char) * dll_path_size);
+    memcpy(dll_path, exe_dir, last_slash_pos + 1);
+    memcpy(dll_path + last_slash_pos + 1, dll_name, dll_name_size);
+
+    free(exe_dir);
+    return dll_path;
+}
+
+static void drift_platform_unload_app_code(platform_app_code_t *app_code)
+{
+    if (app_code->dll)
+    {
+        dlclose(app_code->dll);
+    }
+
+    app_code->dll = 0;
+    app_code->is_valid = 0;
+
+    app_code->init = init_app_stub;
+    app_code->update = update_app_stub;
+    app_code->drift_main = drift_main_stub;
+}
+
+static platform_app_code_t drift_platform_load_app_code(char *dll_path)
+{
+    platform_app_code_t app_code = {0};
+
+    // TODO: Figure out the best mode for dlopen
+    app_code.dll = dlopen(dll_path, RTLD_LOCAL | RTLD_LAZY);
+    if (!app_code.dll)
+    {
+        return app_code;
+    }
+
+    app_code.init = (init_app_t *)dlsym(app_code.dll, "init_app");
+    app_code.update = (update_app_t *)dlsym(app_code.dll, "update_app");
+    app_code.drift_main = (drift_main_t *)dlsym(app_code.dll, "drift_main");
+
+    if (!app_code.init || !app_code.update|| !app_code.drift_main)
+    {
+        app_code.init = init_app_stub;
+        app_code.update = update_app_stub;
+        app_code.drift_main = drift_main_stub;
+        return app_code;
+    }
+
+    app_code.is_valid = 1;
+    return app_code;
+}
 
 static void drift_platform_free_file_memory(void *memory)
 {

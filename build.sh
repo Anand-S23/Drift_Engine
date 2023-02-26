@@ -6,12 +6,11 @@ mkdir -p build
 cd build
 
 CC=gcc
-CFLAGS="-Wall -Wextra -Wno-address -std=c11 -ggdb"
-LIBS="-lGL -lSDL2 -lm -I../third_party"
+CFLAGS="-Wall -Wextra -Wno-address -std=c11 -std=gnu11 -ggdb"
+LIBS="-lGL -lSDL2 -lm -ldl -I../third_party"
+ENGINE="-I../src"
 
-src=../src/drift_entrypoint.c
-name=drift
-
-$CC $CFLAGS -o $name $src ../third_party/GL/glew.c $LIBS
+$CC $CFLAGS ../src/drift_entrypoint.c ../third_party/GL/glew.c $LIBS -o app
+$CC $CFLAGS ../test_game/app.c $LIBS $ENGINE -shared -o drift_app.dll
 
 cd ..
