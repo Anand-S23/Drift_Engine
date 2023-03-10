@@ -1,6 +1,8 @@
 #ifndef DRIFT_MATH_H
 #define DRIFT_MATH_H
 
+#include <math.h>
+
 #define PIf                               3.1415926535897f
 #define TAU                               6.28318530718f
 #define PI_OVER_TWO                       1.57079632679f

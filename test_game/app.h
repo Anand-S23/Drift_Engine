@@ -3,6 +3,7 @@
 
 typedef struct app
 {
+    drift_renderer_t renderer;
     u8 x;
 } app_t;
 

@@ -1,31 +1,11 @@
 #ifndef DRIFT_H
 #define DRIFT_H
 
-#include <stdint.h>
+#include <GL/gl.h>
 
-#define UNUSED(x) (void)(x)
-
-// Signed Integers
-typedef int8_t   i8;
-typedef int16_t  i16;
-typedef int32_t  i32;
-typedef int64_t  i64;
-
-// Unsigned Integers
-typedef uint8_t  u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-
-// Booleans
-typedef int8_t   b8;
-typedef int16_t  b16;
-typedef int32_t  b32;
-typedef int64_t  b64;
-
-// Floats
-typedef float    f32;
-typedef double   f64;
+#include "drift_common.h"
+#include "drift_math.h"
+#include "drift_renderer.c"
 
 typedef struct read_file_result
 {
@@ -118,10 +98,15 @@ typedef struct drift_platform
     controller_input_t controller;
     controller_input_t controllers[4];
 
-    // Functions
+    // IO
     void (*drift_free_file_memory)(void *memory);
     read_file_result_t (*drift_read_file)(const char *filename);
     b32 (*drift_write_file)(const char *filename, u32 memory_size, void *memory);
+
+    // Renderer
+    drift_renderer_t renderer;
+    void (*drift_renderer_init)(drift_renderer_t *renderer);
+    void (*drift_draw_test_rect)(drift_renderer_t *renderer);
 } drift_platform_t;
 
 typedef struct drift_app
