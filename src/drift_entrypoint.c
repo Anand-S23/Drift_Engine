@@ -1,10 +1,7 @@
 #include <SDL2/SDL.h>
-#include <GL/glew.h>
 #include <SDL2/SDL_opengl.h>
-#include <string.h>
 
 #include "drift.h"
-#include "drift_math.h"
 
 #if defined(_WIN32) || defined(_WIN64)
     #include "win32_drift.c"
@@ -208,19 +205,12 @@ int main(void)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-                                                                                       
+    
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major);
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor);
     SDL_Log("GL version %d.%d", major, minor);
 
     if (SDL_GL_CreateContext(window) == NULL)
-    {
-        // TODO: Logging
-        return 1;
-    }
-
-    glewExperimental = GL_TRUE; 
-    if (glewInit() != GLEW_OK)
     {
         // TODO: Logging
         return 1;
