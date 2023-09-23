@@ -5,6 +5,8 @@
 
 #define UNUSED(x) (void)(x)
 
+#define arr_size(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 // Signed Integers
 typedef int8_t   i8;
 typedef int16_t  i16;
@@ -26,6 +28,5 @@ typedef int64_t  b64;
 // Floats
 typedef float    f32;
 typedef double   f64;
-
 
 #endif

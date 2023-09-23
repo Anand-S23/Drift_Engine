@@ -2,8 +2,8 @@
 
 set -xe
 
-mkdir -p build
-cd build
+mkdir -p bin
+cd bin
 
 CC=gcc
 CFLAGS="-Wall -Wextra -Wno-address -Wno-implicit-function-declaration -std=c11 -std=gnu11 -ggdb"

@@ -2,6 +2,7 @@
 #define DRIFT_H
 
 #include <GL/gl.h>
+#include <stddef.h>
 
 #include "drift_common.h"
 #include "drift_math.h"

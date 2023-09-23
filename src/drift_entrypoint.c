@@ -217,11 +217,11 @@ int main(void)
     }
 
     // Initalize Global Platform
-    global_platform.permanent_storage_size = Megabytes(64); 
+    global_platform.permanent_storage_size = megabytes(64); 
     global_platform.permanent_storage = drift_platform_allocate_memory(
         global_platform.permanent_storage_size);
 
-    global_platform.temp_storage_size = Megabytes(100);
+    global_platform.temp_storage_size = megabytes(100);
     global_platform.temp_storage = drift_platform_allocate_memory(
         global_platform.temp_storage_size);
 

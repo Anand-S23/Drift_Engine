@@ -12,20 +12,19 @@
 #define DEG_TO_RAD                        0.0174532925f
 #define RAD_TO_DEG                        57.2958f
 
-#define Bytes(n)     (n)
-#define Kilobytes(n) (Bytes(n)*1024LL)
-#define Megabytes(n) (Kilobytes(n)*1024LL)
-#define Gigabytes(n) (Megabytes(n)*1024LL)
-#define Terabytes(n) (Gigabytes(n)*1024LL)
+#define bytes(n)     (n)
+#define kilobytes(n) (bytes(n)*1024LL)
+#define megabytes(n) (kilobytes(n)*1024LL)
+#define gigabytes(n) (megabytes(n)*1024LL)
+#define terabytes(n) (gigabytes(n)*1024LL)
 
-#define ArraySize(arr)        (sizeof(arr) / sizeof((arr)[0]))
-#define Min(a, b)             ((a) < (b) ? (a) : (b))
-#define Max(a, b)             ((a) > (b) ? (a) : (b))
-#define AbsoluteValue(a)      ((a) > 0 ? (a) : -(a))
-#define Lerp(a, b, t)         (a + (b - a) * t)
-#define Clamp01(val)          Min(1.f, Max(0.f, (val)))
-#define Clamp(min, max, val)  Min((max), Max((min), (val)))
-#define Square(a)             ((a) * (a))
+#define min(a, b)               ((a) < (b) ? (a) : (b))
+#define max(a, b)               ((a) > (b) ? (a) : (b))
+#define absolute_value(a)       ((a) > 0 ? (a) : -(a))
+#define lerp(a, b, t)           (a + (b - a) * t)
+#define clamp01(val)            min(1.f, max(0.f, (val)))
+#define clamp(low, high, val)   min((high), max((low), (val)))
+#define square(a)               ((a) * (a))
 
 // Vector Math
 

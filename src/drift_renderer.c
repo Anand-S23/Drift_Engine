@@ -1,4 +1,3 @@
-#include <stddef.h>
 #include "drift_renderer.h"
 
 void drift_renderer_init(drift_renderer_t *renderer)
